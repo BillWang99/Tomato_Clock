@@ -11,6 +11,9 @@ import { useStats } from './useStats'
 import { useTimer } from './useTimer'
 import { useWakeLock } from './useWakeLock'
 
+/** 晚了 2 秒以內發現時間到，算是 App 開著準時看到的 */
+const ON_TIME_MS = 2000
+
 const MOODS: Readonly<Record<Phase, TomatoMood>> = Object.freeze({
   focus: 'awake',
   shortBreak: 'relaxed',
@@ -32,14 +35,16 @@ export function usePomodoroSession() {
   const flashKey = ref(0)
 
   const timer = useTimer(settings, clock, {
-    onFinish(phase, seconds) {
+    onFinish(phase, seconds, lateMs) {
       if (phase === 'focus') {
         recordFocusSeconds(seconds)
         celebrateKey.value += 1
       }
       finishedPhase.value = phase
       flashKey.value += 1
-      sound.play('finish')
+      // 只在「準時」的那一刻響：App 開著、剛好到時間。從背景回來才發現的（鎖屏時推播通知已經響過）
+      // 只顯示橫幅不出聲，不會在使用者沒預期的時候突然冒出聲音
+      if (lateMs <= ON_TIME_MS) sound.play('finish')
     },
   })
 
@@ -67,7 +72,6 @@ export function usePomodoroSession() {
 
   function dismissTimeUp(): void {
     finishedPhase.value = null
-    sound.dropPending()
   }
 
   async function toggle(): Promise<void> {
@@ -76,8 +80,8 @@ export function usePomodoroSession() {
     // 要開始計時：趁還在點擊裡先準備好推播訂閱，排程請求才能在使用者鎖螢幕前送出
     if (!wasRunning) void push.prepare()
     timer.toggle()
+    // 計時中不出聲讓使用者專注；這裡只是趁點擊解鎖聲音，時間到時才響得出來
     await sound.unlock()
-    sound.play(wasRunning ? 'pause' : 'start')
   }
 
   function reset(): void {

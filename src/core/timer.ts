@@ -28,6 +28,8 @@ export interface TickResult {
   finished: Phase | null
   /** 剛結束的階段實際長度（秒），給今日統計用 */
   finishedSeconds: number
+  /** 比結束時間晚了多久才發現（毫秒）：App 開著時通常不到 1 秒，從背景回來可能是好幾分鐘 */
+  lateMs: number
 }
 
 /** 每個階段對應哪一個時長設定 */
@@ -120,7 +122,7 @@ export function skip(state: TimerState, settings: Settings, now: number): TimerS
 
 /** 每次畫面更新或回到前景時呼叫：時間到了就切到下一段，並回報剛完成的階段 */
 export function tick(state: TimerState, settings: Settings, now: number): TickResult {
-  const notFinished = { state, finished: null, finishedSeconds: 0 }
+  const notFinished = { state, finished: null, finishedSeconds: 0, lateMs: 0 }
   if (state.status !== 'running' || state.endAt === null || now < state.endAt) return notFinished
 
   const finished = state.phase
@@ -133,7 +135,12 @@ export function tick(state: TimerState, settings: Settings, now: number): TickRe
   // 下一段從「發現時間到的這一刻」開始，不從 endAt 開始：
   // 鎖屏半小時回來，不該發現自動開始的休息早就結束了
   const next = nextPhase(finished, completed, settings)
-  return { state: enterPhase(next, completed, settings, now), finished, finishedSeconds }
+  return {
+    state: enterPhase(next, completed, settings, now),
+    finished,
+    finishedSeconds,
+    lateMs: now - state.endAt,
+  }
 }
 
 /** 設定改變時：還沒開始的這一段套用新時長；進行中或暫停中的不動 */

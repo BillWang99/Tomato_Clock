@@ -60,6 +60,12 @@ describe('計時核心', () => {
     expect(remainingMs(result.state, T0 + 26 * MIN)).toBe(5 * MIN)
   })
 
+  it('回報晚了多久才發現時間到：App 開著準時 0.25 秒；鎖屏 5 分鐘回來 5 分鐘', () => {
+    const running = start(createInitialState(settings), T0)
+    expect(tick(running, settings, T0 + 25 * MIN + 250).lateMs).toBe(250)
+    expect(tick(running, settings, T0 + 30 * MIN).lateMs).toBe(5 * MIN)
+  })
+
   it('時間還沒到時 tick 不會結束；時間到後只回報一次完成', () => {
     const running = start(createInitialState(settings), T0)
     expect(tick(running, settings, T0 + 25 * MIN - 1).finished).toBeNull()
