@@ -12,6 +12,14 @@ function selectedTab(wrapper: VueWrapper): string {
   return wrapper.find('[role="tab"][aria-selected="true"]').text()
 }
 
+// 直接把時鐘撥到 ms 之後再走一格，跟手機鎖屏一段時間後回來一樣；
+// 不用一格一格模擬（50 分鐘要畫一萬多次畫面，慢的機器會逾時）。經過的總時間剛好是 ms
+const TICK_MS = 250
+async function jumpForward(ms: number): Promise<void> {
+  vi.setSystemTime(Date.now() + ms - TICK_MS)
+  await vi.advanceTimersByTimeAsync(TICK_MS)
+}
+
 async function pressMain(wrapper: VueWrapper): Promise<void> {
   await wrapper.find('.control-bar .pixel-button--primary').trigger('click')
 }
@@ -41,11 +49,11 @@ describe('蕃茄鐘頁面', () => {
   it('按開始、過 25 分鐘：時間到提示、今日蕃茄 +1、切到短休息 5:00', async () => {
     const wrapper = mount(TimerPage)
     await pressMain(wrapper)
-    await vi.advanceTimersByTimeAsync(10 * MIN)
+    await jumpForward(10 * MIN)
     expect(clockLabel(wrapper)).toBe('剩下 15 分 0 秒')
     expect(document.title).toBe('15:00 專注中 · 像素蕃茄鐘')
 
-    await vi.advanceTimersByTimeAsync(15 * MIN + 500)
+    await jumpForward(15 * MIN + 500)
     expect(document.title).toBe('⏰ 時間到！· 像素蕃茄鐘')
     expect(wrapper.find('[role="alert"]').text()).toContain('專注完成！休息一下吧')
     expect(wrapper.find('.today-stats').attributes('aria-label')).toBe(
@@ -63,15 +71,15 @@ describe('蕃茄鐘頁面', () => {
   it('暫停 3 分鐘：時間停住，繼續後接著倒數', async () => {
     const wrapper = mount(TimerPage)
     await pressMain(wrapper)
-    await vi.advanceTimersByTimeAsync(5 * MIN)
+    await jumpForward(5 * MIN)
     await pressMain(wrapper)
     expect(wrapper.find('.control-bar .pixel-button--primary').text()).toBe('繼續')
 
-    await vi.advanceTimersByTimeAsync(3 * MIN)
+    await jumpForward(3 * MIN)
     expect(clockLabel(wrapper)).toBe('剩下 20 分 0 秒')
 
     await pressMain(wrapper)
-    await vi.advanceTimersByTimeAsync(MIN)
+    await jumpForward(MIN)
     expect(clockLabel(wrapper)).toBe('剩下 19 分 0 秒')
     wrapper.unmount()
   })
@@ -79,10 +87,10 @@ describe('蕃茄鐘頁面', () => {
   it('重新整理頁面：進行中的計時從上次的進度繼續', async () => {
     const first = mount(TimerPage)
     await pressMain(first)
-    await vi.advanceTimersByTimeAsync(10 * MIN)
+    await jumpForward(10 * MIN)
     first.unmount()
 
-    await vi.advanceTimersByTimeAsync(2 * MIN)
+    await jumpForward(2 * MIN)
     const second = mount(TimerPage)
     expect(clockLabel(second)).toBe('剩下 13 分 0 秒')
     expect(second.find('.control-bar .pixel-button--primary').text()).toBe('暫停')
@@ -155,7 +163,7 @@ describe('蕃茄鐘頁面', () => {
     localStorage.setItem('tomato:settings', JSON.stringify({ focusSeconds: 3030 }))
     const wrapper = mount(TimerPage)
     await pressMain(wrapper)
-    await vi.advanceTimersByTimeAsync(3030 * 1000 + 500)
+    await jumpForward(3030 * 1000 + 500)
     expect(wrapper.find('.today-stats').attributes('aria-label')).toBe(
       '今天完成 1 顆蕃茄，專注 50 分鐘',
     )
