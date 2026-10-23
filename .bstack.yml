@@ -39,7 +39,7 @@ features:
   mcp_tools_command: ""
 
 release:
-  smoke_urls: []         # 部署位置確定後填，例如 "https://example.github.io/tomato_clock/"
+  smoke_urls: ["https://billwang99.github.io/Tomato_Clock/", "https://billwang99.github.io/Tomato_Clock/manifest.webmanifest"]
   health_command: ""
   log_command: ""        # 純前端沒有伺服器紀錄
 
