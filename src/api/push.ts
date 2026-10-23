@@ -9,6 +9,17 @@ export interface PushSubscriptionData {
 }
 
 const TIMEOUT_MS = 8000
+/** 伺服器總開關關閉時回的文字；伺服器暫時出錯也是 503，但文字不同 */
+const PAUSED_MESSAGE = '推播暫停服務'
+
+async function errorText(response: Response): Promise<string> {
+  try {
+    const body = (await response.json()) as { error?: unknown }
+    return typeof body.error === 'string' ? body.error : ''
+  } catch {
+    return ''
+  }
+}
 
 /** 伺服器回 410：推播服務說這個訂閱已失效，要重新訂閱 */
 export class PushGoneError extends Error {
@@ -32,6 +43,9 @@ async function post(path: string, body: unknown): Promise<void> {
   }
   if (response.status === 410) throw new PushGoneError()
   if (response.status === 429) throw new Error('操作太頻繁，這次時間到不會跳通知')
+  if (response.status === 503 && (await errorText(response)) === PAUSED_MESSAGE) {
+    throw new Error('推播暫停服務中，這次時間到不會跳通知')
+  }
   if (!response.ok) throw new Error('推播伺服器出錯，這次時間到不會跳通知')
 }
 

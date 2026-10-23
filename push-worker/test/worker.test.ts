@@ -1,7 +1,7 @@
 import { env, runInDurableObject, SELF } from 'cloudflare:test'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AlertObject, PendingAlert } from '../src/alertObject'
-import { alertName } from '../src/index'
+import worker, { alertName } from '../src/index'
 
 const ORIGIN = 'https://billwang99.github.io'
 // 測試之間的 Durable Object 資料不會自動清空，每個測試用一個新的推播網址，互不影響
@@ -140,9 +140,9 @@ describe('來源限制', () => {
     expect(response.headers.get('Access-Control-Allow-Methods')).toContain('POST')
   })
 
-  it('健康檢查不用來源也能打', async () => {
+  it('健康檢查不用來源也能打，並回報總開關狀態', async () => {
     const response = await SELF.fetch('https://tomato-push.test/api/health')
-    expect(await response.json()).toEqual({ ok: true })
+    expect(await response.json()).toEqual({ ok: true, pushEnabled: true })
   })
 })
 
@@ -260,5 +260,20 @@ describe('請求大小', () => {
       body: 'x',
     })
     expect(response.status).toBe(413)
+  })
+})
+
+describe('推播總開關', () => {
+  it('PUSH_ENABLED=false：排程回 503「推播暫停服務」，伺服器上不留任何提醒', async () => {
+    const subscription = await makeSubscription()
+    const request = new Request('https://tomato-push.test/api/schedule', {
+      method: 'POST',
+      headers: { Origin: ORIGIN, 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ subscription, delayMs: 60_000, phase: 'focus', token: 'run-1' }),
+    })
+    const response = await worker.fetch(request, { ...env, PUSH_ENABLED: 'false' })
+    expect(response.status).toBe(503)
+    expect(await response.json()).toEqual({ error: '推播暫停服務' })
+    expect(await pending()).toBeNull()
   })
 })

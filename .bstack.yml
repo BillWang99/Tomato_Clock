@@ -42,7 +42,7 @@ features:
 
 release:
   smoke_urls: ["https://billwang99.github.io/Tomato_Clock/", "https://billwang99.github.io/Tomato_Clock/manifest.webmanifest"]
-  health_command: "node scripts/verify-deploy.mjs"   # 等部署完成並確認網站是這一版
+  health_command: "node scripts/verify-deploy.mjs && node scripts/usage.mjs"   # 等部署完成、確認網站是這一版，再看用量是否在免費額度內
   log_command: ""        # 純前端沒有伺服器紀錄
 
 docs:

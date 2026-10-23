@@ -28,7 +28,7 @@ export default defineConfig({
   },
   test: {
     environment: 'happy-dom',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'scripts/**/*.test.mjs'],
     // GitHub 的機器比本機慢，留一點餘裕
     testTimeout: 15_000,
   },

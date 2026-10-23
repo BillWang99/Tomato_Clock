@@ -1,6 +1,6 @@
 // 蕃茄鐘的推播小伺服器：記住「幾毫秒後提醒誰」，時間到發 Web Push。
 // 部署：npx wrangler deploy（需要先 npx wrangler login）
-// 秘密：npx wrangler secret put VAPID_PRIVATE_KEY（貼上 npm run vapid 產生的私鑰）
+// 秘密：VAPID_PRIVATE_KEY 只存在 Cloudflare；要換新請在專案根目錄執行 npm run vapid:rotate
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "tomato-push",
@@ -18,9 +18,11 @@
     { "name": "RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 30, "period": 60 } }
   ],
   "vars": {
+    // 總開關：被灌請求或要暫停推播時改成 "false"，再 npx wrangler deploy
+    "PUSH_ENABLED": "true",
     "ALLOWED_ORIGINS": "https://billwang99.github.io,http://localhost:5173,http://localhost:5174,http://localhost:4173",
     "VAPID_SUBJECT": "https://github.com/BillWang99/Tomato_Clock",
-    // 公鑰可以公開；部署前用 npm run vapid 產生後填入，網站的 src/core/pushConfig.ts 也要填同一把
-    "VAPID_PUBLIC_KEY": "BHCYyftXnITKY4fPhAKrzRjC_fCRfWne2trXjKC_gmCcu0xHXN1yvfWUvDoz1Gw5XjYgLfWzHvhQyUEci5I4nfE"
+    // 公鑰可以公開；由 npm run vapid:rotate 自動更新，網站的 src/core/pushConfig.ts 是同一把
+    "VAPID_PUBLIC_KEY": "BCmcGkN8OWZJ7GNXbM982uIiP7YDwGVhpOIXtkxrZzgXNZ7BGw1Rn_5N50MbEMe_U2UAi-ER1COd9loqng3PtlE"
   }
 }

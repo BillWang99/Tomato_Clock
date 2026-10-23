@@ -22,6 +22,18 @@ function browserSupportsPush(): boolean {
   return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
 }
 
+function toBase64Url(buffer: ArrayBuffer): string {
+  const binary = String.fromCharCode(...new Uint8Array(buffer))
+  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '')
+}
+
+// 推播金鑰換新後，手機上的舊訂閱是用舊公鑰建立的，伺服器用新金鑰發不過去；比對不一樣就重新訂閱
+function usesCurrentKey(subscription: PushSubscription): boolean {
+  const key = subscription.options?.applicationServerKey
+  if (!key) return true // 瀏覽器不提供就沒辦法比對，當作一樣
+  return toBase64Url(key) === VAPID_PUBLIC_KEY
+}
+
 function toData(subscription: PushSubscription): PushSubscriptionData | null {
   const json = subscription.toJSON()
   if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) return null
@@ -42,8 +54,10 @@ async function currentSubscription(
 ): Promise<PushSubscriptionData> {
   const registration = await serviceWorkerRegistration()
   let subscription = await registration.pushManager.getSubscription()
-  // 伺服器說舊訂閱已失效：退訂後重新訂閱，拿一組新的推播位址
-  if (subscription && replaceExisting) {
+  // 伺服器說舊訂閱已失效、或要排新提醒時發現訂閱是換新前的金鑰：退訂後重新訂閱。
+  // 只是取消提醒時（createIfMissing=false）不比對金鑰：取消只需要推播位址，不能在這時把訂閱退掉
+  const staleKey = createIfMissing && subscription !== null && !usesCurrentKey(subscription)
+  if (subscription && (replaceExisting || staleKey)) {
     await subscription.unsubscribe()
     subscription = null
   }

@@ -12,7 +12,10 @@
     "lint": "eslint .",
     "format": "prettier --write src/",
     "icons": "node scripts/make-icons.mjs",
-    "verify:deploy": "node scripts/verify-deploy.mjs"
+    "verify:deploy": "node scripts/verify-deploy.mjs",
+    "usage": "node scripts/usage.mjs",
+    "vapid:rotate": "node scripts/rotate-vapid.mjs",
+    "vapid:dev": "node scripts/dev-vapid-keys.mjs"
   },
   "dependencies": {
     "@fontsource/fusion-pixel-12px-proportional-tc": "^5.3.0",

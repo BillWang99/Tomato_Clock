@@ -13,6 +13,12 @@ export interface Env extends PushEnv {
   ALERTS: DurableObjectNamespace<AlertObject>
   RATE_LIMITER?: RateLimit
   ALLOWED_ORIGINS: string
+  /** 總開關：設成 "false" 就暫停推播服務（被灌請求時止血用），網站計時不受影響 */
+  PUSH_ENABLED?: string
+}
+
+export function isPushEnabled(env: Pick<Env, 'PUSH_ENABLED'>): boolean {
+  return env.PUSH_ENABLED !== 'false'
 }
 
 const MAX_BODY_BYTES = 4096
@@ -97,13 +103,15 @@ export default {
     const origin = allowedOrigin(request, env)
 
     if (url.pathname === '/api/health' && request.method === 'GET') {
-      return json(200, { ok: true }, origin)
+      return json(200, { ok: true, pushEnabled: isPushEnabled(env) }, origin)
     }
     if (!url.pathname.startsWith('/api/')) return json(404, { error: '找不到' }, origin)
     // 只接受蕃茄鐘網站呼叫（瀏覽器會帶 Origin）
     if (!origin) return json(403, { error: '不允許的來源' }, null)
     if (request.method === 'OPTIONS') return preflight(origin)
     if (request.method !== 'POST') return json(405, { error: '方法不允許' }, origin)
+    // 總開關關著：連頻率限制和 Durable Object 都不碰，用量降到最低
+    if (!isPushEnabled(env)) return json(503, { error: '推播暫停服務' }, origin)
     if (await isRateLimited(request, env)) return json(429, { error: '太頻繁了' }, origin)
     if (tooLarge(request)) return json(413, { error: '內容太大' }, origin)
 

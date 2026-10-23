@@ -8,3 +8,13 @@ node_modules
 dist
 *.local
 .DS_Store
+
+# 秘密檔案一律不進 Git（範本檔 *.example 例外）
+.env
+.env.*
+*.pem
+*.key
+*.p12
+.dev.vars*
+!*.example
+tomato-clock-推播私鑰-*.txt

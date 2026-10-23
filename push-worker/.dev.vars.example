@@ -1,0 +1,8 @@
+# 本機開發推播伺服器（npx wrangler dev）時需要的值。
+# 產生一組本機測試用的金鑰：在專案根目錄執行 npm run vapid:dev > push-worker/.dev.vars
+# .dev.vars 已在 .gitignore，不會進 Git。
+# 不要把正式環境的私鑰放進來：正式私鑰只存在 Cloudflare 與你的密碼管理器。
+# 公鑰也要一起覆寫，不然本機會用 wrangler.jsonc 裡的正式公鑰，跟測試私鑰對不上。
+
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=

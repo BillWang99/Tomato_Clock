@@ -94,3 +94,12 @@ describe('頻率限制的對象', () => {
     expect(rateLimitKey('2001:db8::1')).toBe('2001:db8:0:0::/64')
   })
 })
+
+describe('推播總開關', () => {
+  it('沒設定或設成 "true" 是開著；只有 "false" 才關', async () => {
+    const { isPushEnabled } = await import('../src/index')
+    expect(isPushEnabled({})).toBe(true)
+    expect(isPushEnabled({ PUSH_ENABLED: 'true' })).toBe(true)
+    expect(isPushEnabled({ PUSH_ENABLED: 'false' })).toBe(false)
+  })
+})
