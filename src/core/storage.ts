@@ -4,6 +4,7 @@ export const STORAGE_KEYS = Object.freeze({
   settings: 'tomato:settings',
   timer: 'tomato:timer',
   stats: 'tomato:stats',
+  push: 'tomato:push',
 })
 
 export function readJson(key: string): unknown {

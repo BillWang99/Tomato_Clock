@@ -26,6 +26,8 @@ const {
   mood,
   stage,
   wakeLockSupported,
+  pushStatus,
+  pushError,
   finishedPhase,
   celebrateKey,
   flashKey,
@@ -81,6 +83,9 @@ const isWide = useMediaQuery('(min-width: 600px)')
           <SettingsPanel
             :settings="settings"
             :wake-lock-supported="wakeLockSupported"
+            :push-status="pushStatus"
+            :push-error="pushError"
+            @toggle-push="session.togglePush"
             @update="session.updateSettings"
             @edit="editor.openEditor"
           />
@@ -98,6 +103,9 @@ const isWide = useMediaQuery('(min-width: 600px)')
       <SettingsPanel
         :settings="settings"
         :wake-lock-supported="wakeLockSupported"
+        :push-status="pushStatus"
+        :push-error="pushError"
+        @toggle-push="session.togglePush"
         @update="session.updateSettings"
         @edit="editor.openEditor"
       />

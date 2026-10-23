@@ -10,6 +10,8 @@ export interface Settings {
   volume: number
   keepAwake: boolean
   scanlines: boolean
+  /** 鎖螢幕也提醒（推播），要使用者自己打開 */
+  pushAlerts: boolean
 }
 
 export type DurationKey = 'focusSeconds' | 'shortBreakSeconds' | 'longBreakSeconds'
@@ -30,6 +32,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   volume: 0.6,
   keepAwake: false,
   scanlines: true,
+  pushAlerts: false,
 })
 
 type NumberKey = {
@@ -87,7 +90,7 @@ export function normalizeSettings(raw: unknown): Settings {
     const value = source[key]
     if (typeof value === 'number') result[key] = clampToRange(value, SETTING_RANGES[key])
   }
-  for (const key of ['autoStartNext', 'soundOn', 'keepAwake', 'scanlines'] as const) {
+  for (const key of ['autoStartNext', 'soundOn', 'keepAwake', 'scanlines', 'pushAlerts'] as const) {
     const value = source[key]
     if (typeof value === 'boolean') result[key] = value
   }

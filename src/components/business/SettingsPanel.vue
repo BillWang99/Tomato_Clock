@@ -2,6 +2,8 @@
 import PixelDurationField from '@/components/base/PixelDurationField.vue'
 import PixelStepper from '@/components/base/PixelStepper.vue'
 import PixelSwitch from '@/components/base/PixelSwitch.vue'
+import PushAlertSetting from './PushAlertSetting.vue'
+import type { PushStatus } from '@/composables/usePushAlerts'
 import { DURATION_LABELS } from '@/core/format'
 import {
   DURATION_BUTTON_STEP,
@@ -14,12 +16,16 @@ import {
 defineProps<{
   settings: Settings
   wakeLockSupported: boolean
+  pushStatus: PushStatus
+  pushError: string
 }>()
 
 const emit = defineEmits<{
   update: [patch: Partial<Settings>]
   /** 點了某個時長：打開時間鍵盤 */
   edit: [key: DurationKey]
+  /** 鎖螢幕也提醒：打開時要問通知權限，所以交給上層處理 */
+  togglePush: [on: boolean]
 }>()
 </script>
 
@@ -66,6 +72,11 @@ const emit = defineEmits<{
         :display-scale="10"
         :model-value="settings.volume"
         @update:model-value="emit('update', { volume: $event })"
+      />
+      <PushAlertSetting
+        :status="pushStatus"
+        :error="pushError"
+        @toggle="emit('togglePush', $event)"
       />
       <PixelSwitch
         v-if="wakeLockSupported"

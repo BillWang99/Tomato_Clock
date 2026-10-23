@@ -1,0 +1,26 @@
+// 蕃茄鐘的推播小伺服器：記住「幾毫秒後提醒誰」，時間到發 Web Push。
+// 部署：npx wrangler deploy（需要先 npx wrangler login）
+// 秘密：npx wrangler secret put VAPID_PRIVATE_KEY（貼上 npm run vapid 產生的私鑰）
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tomato-push",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true,
+  // 不留請求日誌，伺服器端不保存任何呼叫紀錄
+  "observability": { "enabled": false },
+  "durable_objects": {
+    "bindings": [{ "name": "ALERTS", "class_name": "AlertObject" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["AlertObject"] }],
+  // 同一個 IP 每分鐘最多 30 次排程／取消
+  "ratelimits": [
+    { "name": "RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 30, "period": 60 } }
+  ],
+  "vars": {
+    "ALLOWED_ORIGINS": "https://billwang99.github.io,http://localhost:5173,http://localhost:5174,http://localhost:4173",
+    "VAPID_SUBJECT": "https://github.com/BillWang99/Tomato_Clock",
+    // 公鑰可以公開；部署前用 npm run vapid 產生後填入，網站的 src/core/pushConfig.ts 也要填同一把
+    "VAPID_PUBLIC_KEY": ""
+  }
+}

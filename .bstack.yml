@@ -20,8 +20,10 @@ database:
 # {files:...} 只換成這次改過的檔案；沒改到就略過
 checks:
   format: ["npx prettier --check {files:js,ts,vue,css,json}"]
-  lint: ["npx eslint {files:js,ts,vue}"]
-  test: ["npx vitest run --passWithNoTests --reporter=default --reporter=junit --outputFile.junit=.bstack/reports/junit.xml"]
+  lint: ["npx eslint {files:js,ts,vue}", "npm --prefix push-worker run typecheck"]
+  test:
+    - "npx vitest run --passWithNoTests --reporter=default --reporter=junit --outputFile.junit=.bstack/reports/junit.xml"
+    - "npm --prefix push-worker test"   # 推播伺服器的測試（在 Cloudflare 的本機環境裡跑）
   test_report: ".bstack/reports/junit.xml"
   related_test: "npx vitest run {name}"
 
@@ -40,7 +42,7 @@ features:
 
 release:
   smoke_urls: ["https://billwang99.github.io/Tomato_Clock/", "https://billwang99.github.io/Tomato_Clock/manifest.webmanifest"]
-  health_command: ""
+  health_command: "node scripts/verify-deploy.mjs"   # 等部署完成並確認網站是這一版
   log_command: ""        # 純前端沒有伺服器紀錄
 
 docs:

@@ -4,6 +4,7 @@ import type { Phase } from '@/core/timer'
 import { ripenessStage, type TomatoMood } from '@/core/tomatoSprite'
 import { useDocumentTitle } from './useDocumentTitle'
 import { useNow } from './useNow'
+import { usePushAlerts } from './usePushAlerts'
 import { useSettings } from './useSettings'
 import { useSound } from './useSound'
 import { useStats } from './useStats'
@@ -48,6 +49,8 @@ export function usePomodoroSession() {
   const mood = computed(() => MOODS[phase.value])
   // 專注時蕃茄隨進度變熟；休息時一律是熟透的紅蕃茄
   const stage = computed(() => (phase.value === 'focus' ? ripenessStage(timer.ratio.value) : 3))
+
+  const push = usePushAlerts(settings, updateSettings, timer.state)
 
   const { supported: wakeLockSupported } = useWakeLock(
     computed(() => settings.value.keepAwake && isRunning.value),
@@ -99,6 +102,9 @@ export function usePomodoroSession() {
     mood,
     stage,
     wakeLockSupported,
+    pushStatus: push.status,
+    pushError: push.errorMessage,
+    togglePush: push.toggle,
     finishedPhase,
     celebrateKey,
     flashKey,

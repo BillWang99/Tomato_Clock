@@ -18,6 +18,8 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,woff2,png,svg,webmanifest}'],
         cleanupOutdatedCaches: true,
+        // 推播通知的處理（public/push-sw.js）
+        importScripts: ['push-sw.js'],
       },
     }),
   ],
