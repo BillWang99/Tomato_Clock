@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import PixelButton from './PixelButton.vue'
+import PixelScrollArea from './PixelScrollArea.vue'
 
 const props = defineProps<{
   open: boolean
@@ -42,7 +43,10 @@ onMounted(sync)
         <h2 class="pixel-dialog__title">{{ title }}</h2>
         <PixelButton @click="emit('close')">{{ closeLabel }}</PixelButton>
       </header>
-      <slot />
+      <!-- 標題列與關閉按鈕固定在上方，只有內容會捲動 -->
+      <PixelScrollArea>
+        <slot />
+      </PixelScrollArea>
     </div>
   </dialog>
 </template>
@@ -52,9 +56,10 @@ onMounted(sync)
 .pixel-dialog {
   width: 100%;
   max-width: var(--content-max);
-  max-height: 88dvh;
+  max-height: 92dvh;
   margin: auto auto 0;
   padding: 0;
+  overflow: hidden;
   border: none;
   background: transparent;
   color: var(--color-text);
@@ -72,8 +77,8 @@ onMounted(sync)
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  max-height: 88dvh;
-  overflow-y: auto;
+  max-height: 92dvh;
+  overflow: hidden;
   padding: var(--space-2) var(--space-2) calc(var(--space-2) + env(safe-area-inset-bottom));
   background: var(--color-surface);
   box-shadow:
@@ -82,6 +87,7 @@ onMounted(sync)
 }
 
 .pixel-dialog__header {
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;

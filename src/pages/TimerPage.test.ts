@@ -20,6 +20,13 @@ async function jumpForward(ms: number): Promise<void> {
   await vi.advanceTimersByTimeAsync(TICK_MS)
 }
 
+// 時間鍵盤上「分」「秒」兩格目前的值，例如 ['50 分', '30 秒']
+function keypadSegments(wrapper: VueWrapper): (string | undefined)[] {
+  return wrapper
+    .findAll('.duration-segments__value [role="img"]')
+    .map((el) => el.attributes('aria-label'))
+}
+
 async function pressMain(wrapper: VueWrapper): Promise<void> {
   await wrapper.find('.control-bar .pixel-button--primary').trigger('click')
 }
@@ -118,10 +125,10 @@ describe('蕃茄鐘頁面', () => {
       const button = keypad.findAll('button').find((b) => b.text() === key)
       await button?.trigger('click')
     }
-    expect(keypad.find('[role="img"]').attributes('aria-label')).toBe('目前輸入 50:30')
+    expect(keypadSegments(first)).toEqual(['50 分', '30 秒'])
     await keypad
       .findAll('button')
-      .find((b) => b.text() === '確定')
+      .find((b) => b.text().startsWith('確定'))
       ?.trigger('click')
 
     expect(first.find('.time-keypad').exists()).toBe(false)
@@ -133,10 +140,10 @@ describe('蕃茄鐘頁面', () => {
     second.unmount()
   })
 
-  it('設定裡點短休息的 05:00 → 用實體鍵盤打 130、Enter → 短休息變 1:30', async () => {
+  it('設定裡點短休息的 05:00 → 用實體鍵盤打 1、冒號、3、0、Enter → 短休息變 1:30', async () => {
     const wrapper = mount(TimerPage, { attachTo: document.body })
     await wrapper.find('[aria-label^="短休息 5 分"]').trigger('click')
-    for (const key of ['1', '3', '0', 'Enter']) {
+    for (const key of ['1', ':', '3', '0', 'Enter']) {
       document.dispatchEvent(new KeyboardEvent('keydown', { key }))
     }
     await wrapper.vm.$nextTick()
@@ -170,15 +177,13 @@ describe('蕃茄鐘頁面', () => {
     wrapper.unmount()
   })
 
-  it('鍵盤開著時：在「取消」上按 Enter 是取消、Cmd+數字不會被當成輸入', async () => {
+  it('鍵盤開著時：只按 5 是 5 分鐘；在「取消」上按 Enter 是取消、Cmd+數字不會被當成輸入', async () => {
     const wrapper = mount(TimerPage, { attachTo: document.body })
     await wrapper.find('.timer-display__digits--editable').trigger('click')
     document.dispatchEvent(new KeyboardEvent('keydown', { key: '9', metaKey: true }))
     document.dispatchEvent(new KeyboardEvent('keydown', { key: '5' }))
     await wrapper.vm.$nextTick()
-    expect(wrapper.find('.time-keypad [role="img"]').attributes('aria-label')).toBe(
-      '目前輸入 00:05',
-    )
+    expect(keypadSegments(wrapper)).toEqual(['5 分', '0 秒'])
 
     const cancel = wrapper.find('.pixel-dialog__header button').element as HTMLButtonElement
     cancel.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))

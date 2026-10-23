@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import PixelButton from '@/components/base/PixelButton.vue'
 import PixelDialog from '@/components/base/PixelDialog.vue'
 import PixelPanel from '@/components/base/PixelPanel.vue'
+import PixelScrollArea from '@/components/base/PixelScrollArea.vue'
 import SettingsPanel from '@/components/business/SettingsPanel.vue'
 import TimeKeypad from '@/components/business/TimeKeypad.vue'
 import TimerPanel from '@/components/business/TimerPanel.vue'
@@ -79,16 +80,18 @@ const isWide = useMediaQuery('(min-width: 600px)')
       />
 
       <aside v-if="isWide" class="timer-page__side">
-        <PixelPanel title="設定">
-          <SettingsPanel
-            :settings="settings"
-            :wake-lock-supported="wakeLockSupported"
-            :push-status="pushStatus"
-            :push-error="pushError"
-            @toggle-push="session.togglePush"
-            @update="session.updateSettings"
-            @edit="editor.openEditor"
-          />
+        <PixelPanel class="timer-page__side-panel" title="設定">
+          <PixelScrollArea>
+            <SettingsPanel
+              :settings="settings"
+              :wake-lock-supported="wakeLockSupported"
+              :push-status="pushStatus"
+              :push-error="pushError"
+              @toggle-push="session.togglePush"
+              @update="session.updateSettings"
+              @edit="editor.openEditor"
+            />
+          </PixelScrollArea>
         </PixelPanel>
       </aside>
     </main>
@@ -245,8 +248,18 @@ const isWide = useMediaQuery('(min-width: 600px)')
   }
 
   .timer-page__side {
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
     padding-top: var(--space-1);
+  }
+
+  /* 設定欄鎖在畫面高度內，由捲動區負責捲動與「往下還有」提示 */
+  .timer-page__side-panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
   }
 }
 

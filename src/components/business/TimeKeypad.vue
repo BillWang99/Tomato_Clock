@@ -2,18 +2,20 @@
 import { computed, onScopeDispose, ref } from 'vue'
 import PixelButton from '@/components/base/PixelButton.vue'
 import PixelDialog from '@/components/base/PixelDialog.vue'
-import PixelDigits from '@/components/base/PixelDigits.vue'
 import {
   clearEntry,
-  entryDisplay,
   entryFromSeconds,
   entryToSeconds,
   isValidEntry,
   pressBackspace,
   pressDigit,
-  type KeypadEntry,
+  selectSegment,
+  stepSegment,
+  type DurationEntry,
+  type Segment,
 } from '@/core/durationInput'
 import { formatDuration, spokenDuration } from '@/core/format'
+import DurationSegments from './DurationSegments.vue'
 
 const props = defineProps<{
   open: boolean
@@ -27,26 +29,38 @@ const emit = defineEmits<{
   close: []
 }>()
 
-const DIGIT_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'] as const
+const DIGIT_KEYS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const
 const PRESET_MINUTES = [5, 15, 25, 50] as const
 
-const entry = ref<KeypadEntry>(entryFromSeconds(props.seconds))
+// 頁面每次打開鍵盤都重新掛載這個元件，所以初始值就是目前時長
+const entry = ref<DurationEntry>(entryFromSeconds(props.seconds))
 
-const display = computed(() => entryDisplay(entry.value))
 const valid = computed(() => isValidEntry(entry.value))
-const hint = computed(() => {
-  const seconds = entryToSeconds(entry.value)
-  if (seconds === 0) return '輸入分鐘與秒數，例如 5030 = 50 分 30 秒'
-  if (!valid.value) return '最長 99:59'
-  return `共 ${spokenDuration(seconds)}`
+const guide = computed(() => {
+  if (!valid.value) return '時間不能是 00:00'
+  return entry.value.segment === 'minutes'
+    ? '正在輸入「分」：打完兩位數會自動跳到「秒」'
+    : '正在輸入「秒」：點「分」可以改回分鐘'
 })
+// 確定按鈕上直接寫出總時間，少一行文字，小手機也放得下
+const confirmLabel = computed(() =>
+  valid.value ? `確定：${spokenDuration(entryToSeconds(entry.value))}` : '確定',
+)
 
-function digit(value: string): void {
+function digit(value: number): void {
   entry.value = pressDigit(entry.value, value)
 }
 
 function backspace(): void {
   entry.value = pressBackspace(entry.value)
+}
+
+function select(segment: Segment): void {
+  entry.value = selectSegment(entry.value, segment)
+}
+
+function step(segment: Segment, delta: 1 | -1): void {
+  entry.value = stepSegment(entry.value, segment, delta)
 }
 
 function usePreset(minutes: number): void {
@@ -58,19 +72,23 @@ function confirm(): void {
   emit('confirm', entryToSeconds(entry.value))
 }
 
-// 電腦上也能直接用鍵盤打數字、Backspace 刪除、Enter 確定。
+// 電腦上也能直接用鍵盤：數字輸入、Backspace 刪除、← → 或冒號切換分秒、↑ ↓ 加減、Enter 確定。
 // 焦點在按鈕上時 Enter 交給按鈕自己（例如在「取消」上按 Enter 是取消）；
 // 有按 Ctrl／Cmd／Alt 的是瀏覽器快捷鍵（Cmd+0 重設縮放），不攔。
 function onKeydown(event: KeyboardEvent): void {
   if (!props.open || event.ctrlKey || event.metaKey || event.altKey) return
-  if (/^[0-9]$/.test(event.key)) digit(event.key)
-  else if (event.key === 'Backspace') backspace()
-  else if (event.key === 'Enter' && !(event.target instanceof HTMLButtonElement)) confirm()
+  const key = event.key
+  if (/^[0-9]$/.test(key)) digit(Number(key))
+  else if (key === 'Backspace') backspace()
+  else if (key === ':' || key === 'ArrowRight') select('seconds')
+  else if (key === 'ArrowLeft') select('minutes')
+  else if (key === 'ArrowUp' || key === 'ArrowDown') {
+    step(entry.value.segment, key === 'ArrowUp' ? 1 : -1)
+  } else if (key === 'Enter' && !(event.target instanceof HTMLButtonElement)) confirm()
   else return
   event.preventDefault()
 }
 
-// 頁面每次打開鍵盤都重新掛載這個元件，所以 entry 的初始值就是目前時長，不用另外監看 open
 document.addEventListener('keydown', onKeydown)
 onScopeDispose(() => document.removeEventListener('keydown', onKeydown))
 </script>
@@ -78,12 +96,16 @@ onScopeDispose(() => document.removeEventListener('keydown', onKeydown))
 <template>
   <PixelDialog :open="open" :title="title" close-label="取消" @close="emit('close')">
     <div class="time-keypad">
-      <div class="time-keypad__screen" :class="{ 'time-keypad__screen--fresh': entry.fresh }">
-        <PixelDigits :text="display" :label="`目前輸入 ${display}`" />
-      </div>
-      <p class="time-keypad__hint" aria-live="polite">{{ hint }}</p>
+      <DurationSegments :entry="entry" @select="select" @step="step" />
+      <p
+        class="time-keypad__guide"
+        :class="{ 'time-keypad__guide--error': !valid }"
+        aria-live="polite"
+      >
+        {{ guide }}
+      </p>
 
-      <div class="time-keypad__presets">
+      <div class="time-keypad__presets" role="group" aria-label="常用時間">
         <PixelButton
           v-for="minutes in PRESET_MINUTES"
           :key="minutes"
@@ -95,12 +117,12 @@ onScopeDispose(() => document.removeEventListener('keydown', onKeydown))
       </div>
 
       <div class="time-keypad__grid">
-        <PixelButton v-for="key in DIGIT_KEYS" :key="key" size="lg" @click="digit(key)">
+        <PixelButton v-for="key in DIGIT_KEYS" :key="key" @click="digit(key)">
           {{ key }}
         </PixelButton>
-        <PixelButton size="lg" aria-label="清除" @click="entry = clearEntry()">清除</PixelButton>
-        <PixelButton size="lg" @click="digit('0')">0</PixelButton>
-        <PixelButton size="lg" aria-label="刪除一位" @click="backspace">⌫</PixelButton>
+        <PixelButton aria-label="清除" @click="entry = clearEntry()">清除</PixelButton>
+        <PixelButton @click="digit(0)">0</PixelButton>
+        <PixelButton aria-label="刪除一位" @click="backspace">⌫</PixelButton>
       </div>
 
       <PixelButton
@@ -110,7 +132,7 @@ onScopeDispose(() => document.removeEventListener('keydown', onKeydown))
         :disabled="!valid"
         @click="confirm"
       >
-        確定
+        {{ confirmLabel }}
       </PixelButton>
     </div>
   </PixelDialog>
@@ -121,27 +143,17 @@ onScopeDispose(() => document.removeEventListener('keydown', onKeydown))
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: var(--space-1);
+  gap: var(--space-half);
 }
 
-.time-keypad__screen {
-  align-self: center;
-  width: min(var(--digits-width), 100%);
-  padding: var(--space-1) var(--space-2);
-  background: var(--color-surface-sunken);
-  color: var(--color-text);
-}
-
-/* 還沒開始輸入時數字暗一點，表示按任何數字會整個重來 */
-.time-keypad__screen--fresh {
-  color: var(--color-text-muted);
-}
-
-.time-keypad__hint {
-  min-height: calc(var(--font-sm) * var(--line-height));
+.time-keypad__guide {
   font-size: var(--font-sm);
-  color: var(--color-text-muted);
+  color: var(--color-phase-light);
   text-align: center;
+}
+
+.time-keypad__guide--error {
+  color: var(--c-orange);
 }
 
 .time-keypad__presets {
@@ -156,6 +168,7 @@ onScopeDispose(() => document.removeEventListener('keydown', onKeydown))
   font-size: var(--font-sm);
 }
 
+/* 數字鍵高度跟著畫面高度縮放：大手機好按，小手機也不用捲動就看得到「確定」 */
 .time-keypad__grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -164,14 +177,16 @@ onScopeDispose(() => document.removeEventListener('keydown', onKeydown))
 
 .time-keypad__grid > * {
   min-width: 0;
-  padding: var(--space-1);
+  min-height: clamp(var(--touch-min), 5.5dvh, calc(var(--touch-min) + var(--space-2)));
+  padding: var(--space-half);
+  font-size: var(--font-lg);
 }
 
 .time-keypad__confirm {
   min-width: 0;
 }
 
-/* 很矮的畫面（手機橫放）：數字鍵縮小，整個鍵盤不用捲動 */
+/* 很矮的畫面（手機橫放）：數字鍵再縮小 */
 @media (max-height: 520px) {
   .time-keypad__grid > * {
     min-height: var(--touch-min);
