@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PixelButton from '@/components/base/PixelButton.vue'
 import PixelSwitch from '@/components/base/PixelSwitch.vue'
 import type { PushStatus } from '@/composables/usePushAlerts'
 
@@ -7,7 +8,7 @@ defineProps<{
   error: string
 }>()
 
-const emit = defineEmits<{ toggle: [on: boolean] }>()
+const emit = defineEmits<{ toggle: [on: boolean]; installHelp: [] }>()
 </script>
 
 <template>
@@ -22,9 +23,14 @@ const emit = defineEmits<{ toggle: [on: boolean] }>()
     />
     <template v-else>
       <span class="push-alert-setting__label">鎖螢幕也提醒</span>
-      <p v-if="status === 'needsInstall'" class="push-alert-setting__hint">
-        iPhone 要先在 Safari 按分享 →「加入主畫面」，從主畫面打開才能使用。
-      </p>
+      <template v-if="status === 'needsInstall'">
+        <p class="push-alert-setting__hint">
+          iPhone 要先在 Safari 按分享 →「加入主畫面」，從主畫面打開才能使用。
+        </p>
+        <PixelButton class="push-alert-setting__help" @click="emit('installHelp')">
+          怎麼加入主畫面
+        </PixelButton>
+      </template>
       <p v-else class="push-alert-setting__hint">
         通知被關閉了，請到手機的「設定 → 通知 → 蕃茄鐘」打開後再回來。
       </p>
@@ -47,6 +53,11 @@ const emit = defineEmits<{ toggle: [on: boolean] }>()
 .push-alert-setting__hint {
   font-size: var(--font-sm);
   color: var(--color-text-muted);
+}
+
+.push-alert-setting__help {
+  align-self: flex-start;
+  font-size: var(--font-sm);
 }
 
 .push-alert-setting__error {

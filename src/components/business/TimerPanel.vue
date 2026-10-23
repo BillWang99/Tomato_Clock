@@ -100,18 +100,32 @@ const emit = defineEmits<{
   padding-bottom: var(--space-1);
 }
 
-@media (min-width: 600px) {
+/* 兩欄（摺疊機展開）時跟右邊的設定欄一起靠上 */
+@media (min-width: 600px) and (orientation: portrait) {
   .timer-panel {
     justify-content: flex-start;
   }
 }
 
+/* 電腦與平板橫放：只有計時器一欄，整組置中、不要被拉開 */
+@media (min-width: 600px) and (orientation: landscape) and (min-height: 521px) {
+  .timer-panel {
+    justify-content: center;
+    gap: var(--space-3);
+  }
+}
+
 /* 手機橫放（寬但很矮）：蕃茄放在數字左邊，主要按鈕不用捲就按得到 */
 @media (min-width: 600px) and (max-height: 520px) {
+  /* 頁首有「設定」按鈕，這裡把上下間距縮到最小，整組才塞得進手機橫放的高度 */
   .timer-panel {
     justify-content: space-between;
-    gap: var(--space-1);
-    padding-top: var(--space-1);
+    gap: var(--space-half);
+    padding-top: 0;
+  }
+
+  .timer-panel__controls {
+    padding-bottom: 0;
   }
 
   .timer-panel__center {

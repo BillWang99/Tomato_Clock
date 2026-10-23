@@ -5,6 +5,7 @@ import { isPushConfigured, VAPID_PUBLIC_KEY } from '@/core/pushConfig'
 import { readJson, STORAGE_KEYS, writeJson } from '@/core/storage'
 import type { Settings } from '@/core/settings'
 import type { TimerState } from '@/core/timer'
+import { isIos, isStandalone } from './devicePlatform'
 
 /**
  * hidden：這個瀏覽器不支援或伺服器還沒設定，設定裡不顯示
@@ -16,19 +17,6 @@ import type { TimerState } from '@/core/timer'
 export type PushStatus = 'hidden' | 'needsInstall' | 'denied' | 'off' | 'on' | 'working'
 
 const READY_TIMEOUT_MS = 10_000
-
-// iPad 的 Safari 會假裝成 Mac，要用「有觸控螢幕的 Mac」來認
-function isIos(): boolean {
-  const ua = navigator.userAgent
-  return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
-}
-
-function isStandalone(): boolean {
-  return (
-    window.matchMedia('(display-mode: standalone)').matches ||
-    (navigator as Navigator & { standalone?: boolean }).standalone === true
-  )
-}
 
 function browserSupportsPush(): boolean {
   return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window

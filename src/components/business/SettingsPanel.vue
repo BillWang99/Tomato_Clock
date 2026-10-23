@@ -26,6 +26,8 @@ const emit = defineEmits<{
   edit: [key: DurationKey]
   /** 鎖螢幕也提醒：打開時要問通知權限，所以交給上層處理 */
   togglePush: [on: boolean]
+  /** 想知道怎麼加入主畫面 */
+  installHelp: []
 }>()
 </script>
 
@@ -77,6 +79,7 @@ const emit = defineEmits<{
         :status="pushStatus"
         :error="pushError"
         @toggle="emit('togglePush', $event)"
+        @install-help="emit('installHelp')"
       />
       <PixelSwitch
         v-if="wakeLockSupported"

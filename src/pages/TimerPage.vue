@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import PixelButton from '@/components/base/PixelButton.vue'
 import PixelDialog from '@/components/base/PixelDialog.vue'
 import PixelPanel from '@/components/base/PixelPanel.vue'
 import PixelScrollArea from '@/components/base/PixelScrollArea.vue'
+import AppHeader from '@/components/business/AppHeader.vue'
+import InstallGuideDialog from '@/components/business/InstallGuideDialog.vue'
 import SettingsPanel from '@/components/business/SettingsPanel.vue'
 import TimeKeypad from '@/components/business/TimeKeypad.vue'
 import TimerPanel from '@/components/business/TimerPanel.vue'
-import TodayStats from '@/components/business/TodayStats.vue'
-import { useMediaQuery } from '@/composables/useMediaQuery'
 import { useDurationEditor } from '@/composables/useDurationEditor'
+import { useInstallPrompt } from '@/composables/useInstallPrompt'
+import { useMediaQuery } from '@/composables/useMediaQuery'
 import { usePomodoroSession } from '@/composables/usePomodoroSession'
-import { APP_NAME } from '@/core/format'
 import { focusMinutesOf } from '@/core/stats'
 import { PHASE_DURATION_KEYS } from '@/core/timer'
 
@@ -35,10 +35,12 @@ const {
 } = session
 
 const editor = useDurationEditor(settings, session.updateSettings)
+const installer = useInstallPrompt()
 
 const settingsOpen = ref(false)
-// 寬螢幕（摺疊機展開、平板、電腦）設定直接放右欄；窄螢幕收進底部面板
-const isWide = useMediaQuery('(min-width: 600px)')
+// 只有寬又直的畫面（摺疊機展開、直放的平板）把設定放右欄，兩欄中間剛好避開摺痕；
+// 橫式手機與電腦只留計時器，設定收進按鈕，畫面比較乾淨、不分心
+const showSidePanel = useMediaQuery('(min-width: 600px) and (orientation: portrait)')
 </script>
 
 <template>
@@ -47,18 +49,16 @@ const isWide = useMediaQuery('(min-width: 600px)')
     :data-phase="phase"
     :class="{ 'timer-page--scanlines': settings.scanlines }"
   >
-    <header class="timer-page__header">
-      <h1 class="timer-page__title">{{ APP_NAME }}</h1>
-      <TodayStats
-        :completed="todayStats.completedPomodoros"
-        :focus-minutes="focusMinutesOf(todayStats)"
-      />
-      <PixelButton v-if="!isWide" aria-haspopup="dialog" @click="settingsOpen = true">
-        設定
-      </PixelButton>
-    </header>
+    <AppHeader
+      :completed="todayStats.completedPomodoros"
+      :focus-minutes="focusMinutesOf(todayStats)"
+      :show-settings-button="!showSidePanel"
+      :show-install-button="installer.available.value"
+      @open-settings="settingsOpen = true"
+      @install="installer.install"
+    />
 
-    <main class="timer-page__main">
+    <main class="timer-page__main" :class="{ 'timer-page__main--split': showSidePanel }">
       <TimerPanel
         class="timer-page__timer"
         :phase="phase"
@@ -79,8 +79,8 @@ const isWide = useMediaQuery('(min-width: 600px)')
         @edit-time="editor.openEditor(PHASE_DURATION_KEYS[phase])"
       />
 
-      <aside v-if="isWide" class="timer-page__side">
-        <PixelPanel class="timer-page__side-panel" title="設定">
+      <aside v-if="showSidePanel" class="timer-page__side">
+        <PixelPanel title="設定">
           <PixelScrollArea>
             <SettingsPanel
               :settings="settings"
@@ -90,6 +90,7 @@ const isWide = useMediaQuery('(min-width: 600px)')
               @toggle-push="session.togglePush"
               @update="session.updateSettings"
               @edit="editor.openEditor"
+              @install-help="installer.install"
             />
           </PixelScrollArea>
         </PixelPanel>
@@ -97,7 +98,7 @@ const isWide = useMediaQuery('(min-width: 600px)')
     </main>
 
     <PixelDialog
-      v-if="!isWide"
+      v-if="!showSidePanel"
       :open="settingsOpen"
       title="設定"
       close-label="完成"
@@ -111,6 +112,7 @@ const isWide = useMediaQuery('(min-width: 600px)')
         @toggle-push="session.togglePush"
         @update="session.updateSettings"
         @edit="editor.openEditor"
+        @install-help="installer.install"
       />
     </PixelDialog>
 
@@ -121,6 +123,12 @@ const isWide = useMediaQuery('(min-width: 600px)')
       :seconds="editor.currentSeconds.value"
       @confirm="editor.confirmEditor"
       @close="editor.closeEditor"
+    />
+
+    <InstallGuideDialog
+      v-if="installer.guidePlatform.value"
+      :platform="installer.guidePlatform.value"
+      @close="installer.closeGuide"
     />
 
     <div v-if="flashKey > 0" :key="flashKey" class="timer-page__flash" aria-hidden="true" />
@@ -145,22 +153,6 @@ const isWide = useMediaQuery('(min-width: 600px)')
   transition: background-color var(--duration-base) steps(4);
 }
 
-.timer-page__header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  max-width: var(--wide-max);
-  margin: 0 auto;
-}
-
-.timer-page__title {
-  margin-right: auto;
-  font-size: var(--font-md);
-  font-weight: normal;
-  color: var(--color-phase-light);
-}
-
 .timer-page__main {
   flex: 1;
   display: flex;
@@ -175,9 +167,23 @@ const isWide = useMediaQuery('(min-width: 600px)')
   max-width: var(--content-max);
 }
 
+/* 摺疊機展開與直放平板：左右兩欄，兩欄中間留寬縫避開摺痕 */
+.timer-page__main--split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: var(--hinge-gap);
+  align-items: start;
+}
+
+.timer-page__main--split > .timer-page__timer,
 .timer-page__side {
-  flex: 1;
+  justify-self: center;
+  width: 100%;
+  min-width: 0;
   max-width: var(--content-max);
+}
+
+.timer-page__side {
   padding-top: var(--space-2);
 }
 
@@ -219,24 +225,7 @@ const isWide = useMediaQuery('(min-width: 600px)')
   }
 }
 
-/* 摺疊機展開與平板：左右兩欄，兩欄中間留寬縫避開摺痕 */
-@media (min-width: 600px) {
-  .timer-page__main {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    column-gap: var(--hinge-gap);
-    align-items: start;
-  }
-
-  .timer-page__timer,
-  .timer-page__side {
-    justify-self: center;
-    width: 100%;
-    min-width: 0;
-  }
-}
-
-/* 手機橫放：整頁鎖在一個畫面高，設定欄自己捲動 */
+/* 手機橫放：整頁鎖在一個畫面高，主要按鈕不用捲就按得到 */
 @media (min-width: 600px) and (max-height: 520px) {
   .timer-page {
     height: 100dvh;
@@ -245,32 +234,6 @@ const isWide = useMediaQuery('(min-width: 600px)')
   .timer-page__main {
     min-height: 0;
     align-items: stretch;
-  }
-
-  .timer-page__side {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    padding-top: var(--space-1);
-  }
-
-  /* 設定欄鎖在畫面高度內，由捲動區負責捲動與「往下還有」提示 */
-  .timer-page__side-panel {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
-  }
-}
-
-/* 摺疊機外螢幕等很窄的畫面 */
-@media (max-width: 359px) {
-  .timer-page__title {
-    display: none;
-  }
-
-  .timer-page__header {
-    justify-content: space-between;
   }
 }
 

@@ -185,12 +185,36 @@ describe('蕃茄鐘頁面', () => {
     await wrapper.vm.$nextTick()
     expect(keypadSegments(wrapper)).toEqual(['5 分', '0 秒'])
 
-    const cancel = wrapper.find('.pixel-dialog__header button').element as HTMLButtonElement
+    const keypadDialog = wrapper.findAll('dialog').find((d) => d.find('.time-keypad').exists())
+    const cancel = keypadDialog?.find('.pixel-dialog__header button').element as HTMLButtonElement
     cancel.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
     cancel.click()
     await wrapper.vm.$nextTick()
     expect(wrapper.find('.time-keypad').exists()).toBe(false)
     expect(clockLabel(wrapper)).toBe('剩下 25 分 0 秒')
     wrapper.unmount()
+  })
+
+  it('手機、橫式、電腦（不是寬又直的畫面）：設定欄收起來，只留「設定」按鈕', () => {
+    const wrapper = mount(TimerPage)
+    expect(wrapper.find('.timer-page__side').exists()).toBe(false)
+    expect(wrapper.findAll('.app-header button').some((b) => b.text() === '設定')).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('寬又直的畫面（摺疊機展開）：設定直接放右欄，不需要「設定」按鈕', () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query: string) =>
+        ({
+          matches: query === '(min-width: 600px) and (orientation: portrait)',
+          addEventListener: () => undefined,
+          removeEventListener: () => undefined,
+        }) as unknown as MediaQueryList,
+    )
+    const wrapper = mount(TimerPage)
+    expect(wrapper.find('.timer-page__side').exists()).toBe(true)
+    expect(wrapper.findAll('.app-header button').some((b) => b.text() === '設定')).toBe(false)
+    wrapper.unmount()
+    vi.restoreAllMocks()
   })
 })
