@@ -1,0 +1,4 @@
+dist
+node_modules
+.bstack
+src/assets/fonts

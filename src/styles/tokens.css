@@ -1,0 +1,113 @@
+/*
+ * 全專案唯一的顏色、字級、間距來源。元件只准用這裡的變數。
+ * 色盤：Sweetie 16（GrafxKid，公開給大家使用的 16 色像素色盤）。
+ */
+:root {
+  /* 色盤 */
+  --c-ink: #1a1c2c;
+  --c-plum: #5d275d;
+  --c-red: #b13e53;
+  --c-orange: #ef7d57;
+  --c-yellow: #ffcd75;
+  --c-lime: #a7f070;
+  --c-green: #38b764;
+  --c-teal: #257179;
+  --c-navy: #29366f;
+  --c-blue: #3b5dc9;
+  --c-sky: #41a6f6;
+  --c-cyan: #73eff7;
+  --c-white: #f4f4f4;
+  --c-silver: #94b0c2;
+  --c-slate: #566c86;
+  --c-shadow: #333c57;
+
+  /* 語意色 */
+  --color-bg: var(--c-ink);
+  --color-surface: var(--c-shadow);
+  --color-surface-sunken: var(--c-ink);
+  --color-text: var(--c-white);
+  --color-text-muted: var(--c-silver);
+  --color-text-on-phase: var(--c-white);
+  --color-edge: var(--c-ink);
+  --color-grid: rgb(0 0 0 / 0.16);
+  --color-scanline: rgb(0 0 0 / 0.1);
+  --color-flash: rgb(244 244 244 / 0.35);
+
+  /* 階段色，預設是專注；由 [data-phase] 切換 */
+  --color-phase: var(--c-red);
+  --color-phase-light: var(--c-orange);
+  --color-phase-dark: var(--c-plum);
+  --color-phase-bg: color-mix(in srgb, var(--c-red) 22%, var(--c-ink));
+
+  /* 蕃茄成熟度（專注時由青轉紅） */
+  --color-tomato-0: var(--c-lime);
+  --color-tomato-0-shade: var(--c-green);
+  --color-tomato-0-light: var(--c-white);
+  --color-tomato-1: var(--c-yellow);
+  --color-tomato-1-shade: var(--c-orange);
+  --color-tomato-1-light: var(--c-white);
+  --color-tomato-2: var(--c-orange);
+  --color-tomato-2-shade: var(--c-red);
+  --color-tomato-2-light: var(--c-yellow);
+  --color-tomato-3: var(--c-red);
+  --color-tomato-3-shade: var(--c-plum);
+  --color-tomato-3-light: var(--c-orange);
+  --color-tomato-leaf: var(--c-green);
+  --color-tomato-leaf-dark: var(--c-teal);
+  --color-tomato-face: var(--c-ink);
+  --color-tomato-cheek: var(--c-orange);
+
+  /* 一個「像素」的大小：邊框、陰影、按下的位移都用它 */
+  --px: 4px;
+
+  /* 間距：8 的倍數 */
+  --space-half: 4px;
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-6: 48px;
+
+  /* 字級：像素字型是 12px 點陣，用 12 的倍數最銳利 */
+  --font-family: 'Fusion Pixel TC', 'PingFang TC', 'Noto Sans TC', monospace;
+  --font-sm: 12px;
+  --font-md: 18px;
+  --font-lg: 24px;
+  --font-xl: 36px;
+  --line-height: 1.5;
+
+  /* 尺寸 */
+  --touch-min: 44px;
+  --tomato-size: clamp(112px, 36vw, 208px);
+  --digits-width: clamp(216px, 78vw, 400px);
+  --content-max: 480px;
+  --wide-max: 1040px;
+  --hinge-gap: 64px;
+
+  /* 動畫 */
+  --duration-fast: 120ms;
+  --duration-base: 240ms;
+  --duration-burst: 900ms;
+}
+
+[data-phase='shortBreak'] {
+  --color-phase: var(--c-green);
+  --color-phase-light: var(--c-lime);
+  --color-phase-dark: var(--c-teal);
+  --color-phase-bg: color-mix(in srgb, var(--c-green) 20%, var(--c-ink));
+}
+
+[data-phase='longBreak'] {
+  --color-phase: var(--c-blue);
+  --color-phase-light: var(--c-sky);
+  --color-phase-dark: var(--c-navy);
+  --color-phase-bg: color-mix(in srgb, var(--c-blue) 24%, var(--c-ink));
+}
+
+/* 很矮的畫面（手機橫放）：主角與數字縮小，按鈕才放得下 */
+@media (max-height: 520px) {
+  :root {
+    --tomato-size: clamp(64px, 20vh, 104px);
+    --digits-width: clamp(160px, 26vw, 240px);
+  }
+}

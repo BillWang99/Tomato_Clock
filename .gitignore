@@ -3,3 +3,8 @@
 # bstack
 .bstack/*
 !.bstack/baseline.json
+
+node_modules
+dist
+*.local
+.DS_Store
