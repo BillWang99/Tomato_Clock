@@ -46,6 +46,9 @@ export function usePomodoroSession() {
   const phase = computed(() => timer.state.value.phase)
   const status = computed(() => timer.state.value.status)
   const isRunning = computed(() => status.value === 'running')
+  // 計時中切到背景（鎖螢幕、切 App）時，數字先換成 --:--：iPhone 解鎖時會先秀出凍結前的那一格畫面，
+  // 程式恢復前那一瞬間就不會看到停住的舊秒數。暫停中、還沒開始的數字本來就是對的，不用換
+  const clockMasked = computed(() => isRunning.value && !clock.visible.value)
   const mood = computed(() => MOODS[phase.value])
   // 專注時蕃茄隨進度變熟；休息時一律是熟透的紅蕃茄
   const stage = computed(() => (phase.value === 'focus' ? ripenessStage(timer.ratio.value) : 3))
@@ -99,6 +102,7 @@ export function usePomodoroSession() {
     phase,
     status,
     remaining: timer.remaining,
+    clockMasked,
     ratio: timer.ratio,
     completedInCycle: computed(() => timer.state.value.completedInCycle),
     mood,

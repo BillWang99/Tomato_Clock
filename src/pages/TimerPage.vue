@@ -24,6 +24,7 @@ const {
   phase,
   status,
   remaining,
+  clockMasked,
   ratio,
   completedInCycle,
   mood,
@@ -68,6 +69,7 @@ const showSidePanel = useMediaQuery('(min-width: 600px) and (orientation: portra
         :phase="phase"
         :status="status"
         :remaining-ms="remaining"
+        :clock-masked="clockMasked"
         :progress="ratio"
         :completed-in-cycle="completedInCycle"
         :long-break-interval="settings.longBreakInterval"

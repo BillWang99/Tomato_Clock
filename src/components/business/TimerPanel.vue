@@ -15,6 +15,7 @@ defineProps<{
   phase: Phase
   status: TimerStatus
   remainingMs: number
+  clockMasked: boolean
   progress: number
   completedInCycle: number
   longBreakInterval: number
@@ -48,6 +49,7 @@ const emit = defineEmits<{
       <TimerDisplay
         class="timer-panel__display"
         :remaining-ms="remainingMs"
+        :masked="clockMasked"
         :progress="progress"
         :status="status"
         @edit="emit('editTime')"

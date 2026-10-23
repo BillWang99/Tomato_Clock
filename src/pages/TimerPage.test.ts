@@ -217,4 +217,39 @@ describe('蕃茄鐘頁面', () => {
     wrapper.unmount()
     vi.restoreAllMocks()
   })
+
+  it('計時中鎖螢幕：數字先換成 --:--（凍結的畫面不會停在舊秒數）；解鎖後第一個畫面就是正確時間', async () => {
+    const setVisibility = (state: 'visible' | 'hidden') => {
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state })
+      document.dispatchEvent(new Event('visibilitychange'))
+    }
+    const wrapper = mount(TimerPage)
+    await pressMain(wrapper)
+    await jumpForward(5 * MIN)
+    expect(clockLabel(wrapper)).toBe('剩下 20 分 0 秒')
+
+    setVisibility('hidden')
+    await wrapper.vm.$nextTick()
+    expect(clockLabel(wrapper)).toBe('畫面更新中')
+
+    // 鎖屏 10 分鐘：這段時間網頁被凍結，計時器完全沒跑
+    vi.setSystemTime(Date.now() + 10 * MIN)
+    setVisibility('visible')
+    await wrapper.vm.$nextTick()
+    expect(clockLabel(wrapper)).toBe('剩下 10 分 0 秒')
+    wrapper.unmount()
+  })
+
+  it('暫停中切到背景：數字本來就是對的，不換成 --:--', async () => {
+    const wrapper = mount(TimerPage)
+    await pressMain(wrapper)
+    await jumpForward(MIN)
+    await pressMain(wrapper)
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' })
+    document.dispatchEvent(new Event('visibilitychange'))
+    await wrapper.vm.$nextTick()
+    expect(clockLabel(wrapper)).toBe('剩下 24 分 0 秒')
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' })
+    wrapper.unmount()
+  })
 })

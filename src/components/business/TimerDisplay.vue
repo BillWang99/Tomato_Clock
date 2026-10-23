@@ -6,6 +6,8 @@ import type { TimerStatus } from '@/core/timer'
 
 const props = defineProps<{
   remainingMs: number
+  /** 切到背景時遮住數字（顯示 --:--），解鎖時才不會看到停住的舊秒數 */
+  masked?: boolean
   progress: number
   status: TimerStatus
 }>()
@@ -18,8 +20,9 @@ const emit = defineEmits<{
 // 進度條切成 20 格，一格一格亮起來
 const BLOCKS = 20
 
-const clock = computed(() => formatClock(props.remainingMs))
+const clock = computed(() => (props.masked ? '--:--' : formatClock(props.remainingMs)))
 const spokenTime = computed(() => {
+  if (props.masked) return '畫面更新中'
   const [minutes, seconds] = clock.value.split(':').map(Number)
   return `剩下 ${minutes} 分 ${seconds} 秒`
 })
