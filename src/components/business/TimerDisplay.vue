@@ -10,6 +10,11 @@ const props = defineProps<{
   status: TimerStatus
 }>()
 
+const emit = defineEmits<{
+  /** 還沒開始時點數字：打開時間鍵盤 */
+  edit: []
+}>()
+
 // 進度條切成 20 格，一格一格亮起來
 const BLOCKS = 20
 
@@ -20,14 +25,25 @@ const spokenTime = computed(() => {
 })
 const filledBlocks = computed(() => Math.floor(props.progress * BLOCKS))
 const percent = computed(() => Math.round(props.progress * 100))
+// 只有還沒開始時能改時間；計時中、暫停中改的話會搞不清楚改的是這一段還是下一段
+const editable = computed(() => props.status === 'idle')
 const statusText = computed(
-  () => ({ idle: '準備開始', running: '計時中', paused: '已暫停' })[props.status],
+  () => ({ idle: '點數字可以改時間', running: '計時中', paused: '已暫停' })[props.status],
 )
 </script>
 
 <template>
   <div class="timer-display" :class="`timer-display--${status}`">
-    <div class="timer-display__digits">
+    <button
+      v-if="editable"
+      type="button"
+      class="timer-display__digits timer-display__digits--editable"
+      :aria-label="`${spokenTime}，點一下修改時間`"
+      @click="emit('edit')"
+    >
+      <PixelDigits :text="clock" :label="spokenTime" />
+    </button>
+    <div v-else class="timer-display__digits">
       <PixelDigits :text="clock" :label="spokenTime" />
     </div>
     <div
@@ -61,6 +77,18 @@ const statusText = computed(
 .timer-display__digits {
   width: 100%;
   color: var(--color-text);
+}
+
+.timer-display__digits--editable {
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.timer-display__digits--editable:active {
+  transform: translateY(var(--px));
 }
 
 .timer-display--paused .timer-display__digits {

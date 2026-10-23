@@ -17,7 +17,7 @@ import {
 
 export interface TimerHooks {
   /** 某一段時間到了（含重新整理後才發現早就到了） */
-  onFinish: (phase: Phase, minutes: number) => void
+  onFinish: (phase: Phase, seconds: number) => void
 }
 
 // 把純函式的狀態機接上 Vue：負責「現在時間」、存檔、設定變更
@@ -35,7 +35,7 @@ export function useTimer(
     const result = tick(state.value, settings.value, at)
     if (!result.finished) return
     state.value = result.state
-    hooks.onFinish(result.finished, result.finishedMinutes)
+    hooks.onFinish(result.finished, result.finishedSeconds)
   }
 
   // 按鈕操作用「按下那一刻」的時間，不用上一次 tick 的時間，暫停才精準

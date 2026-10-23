@@ -4,11 +4,15 @@ import PixelButton from '@/components/base/PixelButton.vue'
 import PixelDialog from '@/components/base/PixelDialog.vue'
 import PixelPanel from '@/components/base/PixelPanel.vue'
 import SettingsPanel from '@/components/business/SettingsPanel.vue'
+import TimeKeypad from '@/components/business/TimeKeypad.vue'
 import TimerPanel from '@/components/business/TimerPanel.vue'
 import TodayStats from '@/components/business/TodayStats.vue'
 import { useMediaQuery } from '@/composables/useMediaQuery'
+import { useDurationEditor } from '@/composables/useDurationEditor'
 import { usePomodoroSession } from '@/composables/usePomodoroSession'
 import { APP_NAME } from '@/core/format'
+import { focusMinutesOf } from '@/core/stats'
+import { PHASE_DURATION_KEYS } from '@/core/timer'
 
 const session = usePomodoroSession()
 const {
@@ -27,6 +31,8 @@ const {
   flashKey,
 } = session
 
+const editor = useDurationEditor(settings, session.updateSettings)
+
 const settingsOpen = ref(false)
 // 寬螢幕（摺疊機展開、平板、電腦）設定直接放右欄；窄螢幕收進底部面板
 const isWide = useMediaQuery('(min-width: 600px)')
@@ -42,7 +48,7 @@ const isWide = useMediaQuery('(min-width: 600px)')
       <h1 class="timer-page__title">{{ APP_NAME }}</h1>
       <TodayStats
         :completed="todayStats.completedPomodoros"
-        :focus-minutes="todayStats.focusMinutes"
+        :focus-minutes="focusMinutesOf(todayStats)"
       />
       <PixelButton v-if="!isWide" aria-haspopup="dialog" @click="settingsOpen = true">
         設定
@@ -67,6 +73,7 @@ const isWide = useMediaQuery('(min-width: 600px)')
         @reset="session.reset"
         @skip="session.skip"
         @dismiss="session.dismissTimeUp"
+        @edit-time="editor.openEditor(PHASE_DURATION_KEYS[phase])"
       />
 
       <aside v-if="isWide" class="timer-page__side">
@@ -75,6 +82,7 @@ const isWide = useMediaQuery('(min-width: 600px)')
             :settings="settings"
             :wake-lock-supported="wakeLockSupported"
             @update="session.updateSettings"
+            @edit="editor.openEditor"
           />
         </PixelPanel>
       </aside>
@@ -91,8 +99,18 @@ const isWide = useMediaQuery('(min-width: 600px)')
         :settings="settings"
         :wake-lock-supported="wakeLockSupported"
         @update="session.updateSettings"
+        @edit="editor.openEditor"
       />
     </PixelDialog>
+
+    <TimeKeypad
+      v-if="editor.editingKey.value"
+      open
+      :title="editor.title.value"
+      :seconds="editor.currentSeconds.value"
+      @confirm="editor.confirmEditor"
+      @close="editor.closeEditor"
+    />
 
     <div v-if="flashKey > 0" :key="flashKey" class="timer-page__flash" aria-hidden="true" />
   </div>

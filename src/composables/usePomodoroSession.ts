@@ -20,7 +20,7 @@ const MOODS: Readonly<Record<Phase, TomatoMood>> = Object.freeze({
 export function usePomodoroSession() {
   const clock = useNow()
   const { settings, updateSettings } = useSettings()
-  const { todayStats, recordFocusMinutes } = useStats(clock.now)
+  const { todayStats, recordFocusSeconds } = useStats(clock.now)
   const sound = useSound(settings)
 
   /** 剛結束的階段；有值時顯示「時間到」橫幅，按「知道了」或任何操作後清掉 */
@@ -31,9 +31,9 @@ export function usePomodoroSession() {
   const flashKey = ref(0)
 
   const timer = useTimer(settings, clock, {
-    onFinish(phase, minutes) {
+    onFinish(phase, seconds) {
       if (phase === 'focus') {
-        recordFocusMinutes(minutes)
+        recordFocusSeconds(seconds)
         celebrateKey.value += 1
       }
       finishedPhase.value = phase

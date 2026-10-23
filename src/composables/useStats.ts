@@ -9,11 +9,11 @@ export function useStats(now: Ref<number>) {
   // 畫面一直開著跨過午夜時，數字也要自動歸零
   const todayStats = computed(() => statsForToday(stored.value, today.value))
 
-  function recordFocusMinutes(minutes: number): void {
-    stored.value = recordFocus(stored.value, today.value, minutes)
+  function recordFocusSeconds(seconds: number): void {
+    stored.value = recordFocus(stored.value, today.value, seconds)
   }
 
   watch(stored, (value) => writeJson(STORAGE_KEYS.stats, value), { deep: true })
 
-  return { todayStats, recordFocusMinutes }
+  return { todayStats, recordFocusSeconds }
 }

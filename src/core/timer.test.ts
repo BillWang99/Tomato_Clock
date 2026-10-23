@@ -53,7 +53,7 @@ describe('計時核心', () => {
     const running = start(createInitialState(settings), T0)
     const result = tick(running, settings, T0 + 26 * MIN)
     expect(result.finished).toBe('focus')
-    expect(result.finishedMinutes).toBe(25)
+    expect(result.finishedSeconds).toBe(25 * 60)
     expect(result.state.phase).toBe('shortBreak')
     expect(result.state.status).toBe('idle')
     expect(result.state.completedInCycle).toBe(1)
@@ -150,7 +150,7 @@ describe('計時核心', () => {
   })
 
   it('設定改成 50 分鐘：還沒開始的套用新時長，進行中的不受影響', () => {
-    const s = { ...settings, focusMinutes: 50 }
+    const s = { ...settings, focusSeconds: 50 * 60 }
     expect(remainingMs(applySettings(createInitialState(settings), s), T0)).toBe(50 * MIN)
 
     const running = start(createInitialState(settings), T0)
@@ -159,8 +159,15 @@ describe('計時核心', () => {
 
   it('進行中改設定，完成時統計記的是實際跑的 25 分鐘', () => {
     const running = start(createInitialState(settings), T0)
-    const changed = applySettings(running, { ...settings, focusMinutes: 50 })
-    expect(tick(changed, settings, T0 + 25 * MIN).finishedMinutes).toBe(25)
+    const changed = applySettings(running, { ...settings, focusSeconds: 50 * 60 })
+    expect(tick(changed, settings, T0 + 25 * MIN).finishedSeconds).toBe(25 * 60)
+  })
+
+  it('專注設成 50 分 30 秒：開始後剩 50:30，跑完統計記 3030 秒', () => {
+    const s = { ...settings, focusSeconds: 50 * 60 + 30 }
+    const running = start(createInitialState(s), T0)
+    expect(remainingMs(running, T0)).toBe(3030 * 1000)
+    expect(tick(running, s, T0 + 3030 * 1000).finishedSeconds).toBe(3030)
   })
 })
 

@@ -1,9 +1,9 @@
 // 使用者設定：預設值與檢查。存在 localStorage，讀回來時一律經過 normalizeSettings，壞資料不會讓畫面壞掉。
 
 export interface Settings {
-  focusMinutes: number
-  shortBreakMinutes: number
-  longBreakMinutes: number
+  focusSeconds: number
+  shortBreakSeconds: number
+  longBreakSeconds: number
   longBreakInterval: number
   autoStartNext: boolean
   soundOn: boolean
@@ -12,10 +12,18 @@ export interface Settings {
   scanlines: boolean
 }
 
+export type DurationKey = 'focusSeconds' | 'shortBreakSeconds' | 'longBreakSeconds'
+
+export const DURATION_KEYS: readonly DurationKey[] = [
+  'focusSeconds',
+  'shortBreakSeconds',
+  'longBreakSeconds',
+]
+
 export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
-  focusMinutes: 25,
-  shortBreakMinutes: 5,
-  longBreakMinutes: 15,
+  focusSeconds: 25 * 60,
+  shortBreakSeconds: 5 * 60,
+  longBreakSeconds: 15 * 60,
   longBreakInterval: 4,
   autoStartNext: false,
   soundOn: true,
@@ -34,13 +42,26 @@ export interface NumberRange {
   step: number
 }
 
+/** 時長一律 00:01～99:59，也就是時間鍵盤四位數能輸入的最大值 */
+export const DURATION_RANGE: Readonly<NumberRange> = Object.freeze({ min: 1, max: 5999, step: 1 })
+
+/** 時長旁邊的 −／+ 一次加減 1 分鐘 */
+export const DURATION_BUTTON_STEP = 60
+
 // 畫面上步進器的範圍也從這裡拿，確保「能設定的值」與「存得進去的值」一致
 export const SETTING_RANGES: Readonly<Record<NumberKey, NumberRange>> = Object.freeze({
-  focusMinutes: { min: 1, max: 90, step: 1 },
-  shortBreakMinutes: { min: 1, max: 30, step: 1 },
-  longBreakMinutes: { min: 1, max: 60, step: 1 },
+  focusSeconds: DURATION_RANGE,
+  shortBreakSeconds: DURATION_RANGE,
+  longBreakSeconds: DURATION_RANGE,
   longBreakInterval: { min: 2, max: 8, step: 1 },
   volume: { min: 0, max: 1, step: 0.1 },
+})
+
+// 第一版（v0.1.0）存的是分鐘，讀到舊欄位就換算成秒，使用者原本的設定不會不見
+const LEGACY_MINUTE_KEYS: Readonly<Record<DurationKey, string>> = Object.freeze({
+  focusSeconds: 'focusMinutes',
+  shortBreakSeconds: 'shortBreakMinutes',
+  longBreakSeconds: 'longBreakMinutes',
 })
 
 export function clampToRange(value: number, range: NumberRange): number {
@@ -56,6 +77,12 @@ export function normalizeSettings(raw: unknown): Settings {
   const source = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {}
   const result: Settings = { ...DEFAULT_SETTINGS }
 
+  for (const key of DURATION_KEYS) {
+    const legacy = source[LEGACY_MINUTE_KEYS[key]]
+    if (typeof source[key] !== 'number' && typeof legacy === 'number') {
+      result[key] = clampToRange(legacy * 60, DURATION_RANGE)
+    }
+  }
   for (const key of Object.keys(SETTING_RANGES) as NumberKey[]) {
     const value = source[key]
     if (typeof value === 'number') result[key] = clampToRange(value, SETTING_RANGES[key])

@@ -2,7 +2,7 @@
 // 計時一律以「結束時間戳記 endAt」計算，不累加 setInterval：
 // 手機切到背景、鎖螢幕時瀏覽器會暫停計時器，但回來時用 now 與 endAt 相減，時間仍然正確。
 
-import type { Settings } from './settings'
+import type { DurationKey, Settings } from './settings'
 
 export type Phase = 'focus' | 'shortBreak' | 'longBreak'
 export type TimerStatus = 'idle' | 'running' | 'paused'
@@ -26,19 +26,19 @@ export interface TickResult {
   state: TimerState
   /** 這次 tick 剛好結束的階段；沒有結束就是 null */
   finished: Phase | null
-  /** 剛結束的階段實際長度（分鐘），給今日統計用 */
-  finishedMinutes: number
+  /** 剛結束的階段實際長度（秒），給今日統計用 */
+  finishedSeconds: number
 }
 
-const MINUTE_MS = 60_000
+/** 每個階段對應哪一個時長設定 */
+export const PHASE_DURATION_KEYS: Readonly<Record<Phase, DurationKey>> = Object.freeze({
+  focus: 'focusSeconds',
+  shortBreak: 'shortBreakSeconds',
+  longBreak: 'longBreakSeconds',
+})
 
 export function phaseDurationMs(phase: Phase, settings: Settings): number {
-  const minutes = {
-    focus: settings.focusMinutes,
-    shortBreak: settings.shortBreakMinutes,
-    longBreak: settings.longBreakMinutes,
-  }[phase]
-  return minutes * MINUTE_MS
+  return settings[PHASE_DURATION_KEYS[phase]] * 1000
 }
 
 export function createInitialState(settings: Settings): TimerState {
@@ -120,11 +120,11 @@ export function skip(state: TimerState, settings: Settings, now: number): TimerS
 
 /** 每次畫面更新或回到前景時呼叫：時間到了就切到下一段，並回報剛完成的階段 */
 export function tick(state: TimerState, settings: Settings, now: number): TickResult {
-  const notFinished = { state, finished: null, finishedMinutes: 0 }
+  const notFinished = { state, finished: null, finishedSeconds: 0 }
   if (state.status !== 'running' || state.endAt === null || now < state.endAt) return notFinished
 
   const finished = state.phase
-  const finishedMinutes = Math.round(state.durationMs / MINUTE_MS)
+  const finishedSeconds = Math.round(state.durationMs / 1000)
   const completed =
     finished === 'focus'
       ? state.completedInCycle + 1
@@ -133,7 +133,7 @@ export function tick(state: TimerState, settings: Settings, now: number): TickRe
   // 下一段從「發現時間到的這一刻」開始，不從 endAt 開始：
   // 鎖屏半小時回來，不該發現自動開始的休息早就結束了
   const next = nextPhase(finished, completed, settings)
-  return { state: enterPhase(next, completed, settings, now), finished, finishedMinutes }
+  return { state: enterPhase(next, completed, settings, now), finished, finishedSeconds }
 }
 
 /** 設定改變時：還沒開始的這一段套用新時長；進行中或暫停中的不動 */

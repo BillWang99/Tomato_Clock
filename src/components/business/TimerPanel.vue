@@ -28,6 +28,7 @@ const emit = defineEmits<{
   reset: []
   skip: []
   dismiss: []
+  editTime: []
 }>()
 </script>
 
@@ -45,6 +46,7 @@ const emit = defineEmits<{
         :remaining-ms="remainingMs"
         :progress="progress"
         :status="status"
+        @edit="emit('editTime')"
       />
       <CycleMeter
         class="timer-panel__cycle"

@@ -1,40 +1,41 @@
 <script setup lang="ts">
+import PixelDurationField from '@/components/base/PixelDurationField.vue'
 import PixelStepper from '@/components/base/PixelStepper.vue'
 import PixelSwitch from '@/components/base/PixelSwitch.vue'
-import { SETTING_RANGES, type Settings } from '@/core/settings'
+import { DURATION_LABELS } from '@/core/format'
+import {
+  DURATION_BUTTON_STEP,
+  DURATION_KEYS,
+  SETTING_RANGES,
+  type DurationKey,
+  type Settings,
+} from '@/core/settings'
 
 defineProps<{
   settings: Settings
   wakeLockSupported: boolean
 }>()
 
-const emit = defineEmits<{ update: [patch: Partial<Settings>] }>()
+const emit = defineEmits<{
+  update: [patch: Partial<Settings>]
+  /** 點了某個時長：打開時間鍵盤 */
+  edit: [key: DurationKey]
+}>()
 </script>
 
 <template>
   <div class="settings-panel">
     <fieldset class="settings-panel__group">
       <legend class="settings-panel__legend">時間</legend>
-      <PixelStepper
-        label="專注"
-        unit="分"
-        :range="SETTING_RANGES.focusMinutes"
-        :model-value="settings.focusMinutes"
-        @update:model-value="emit('update', { focusMinutes: $event })"
-      />
-      <PixelStepper
-        label="短休息"
-        unit="分"
-        :range="SETTING_RANGES.shortBreakMinutes"
-        :model-value="settings.shortBreakMinutes"
-        @update:model-value="emit('update', { shortBreakMinutes: $event })"
-      />
-      <PixelStepper
-        label="長休息"
-        unit="分"
-        :range="SETTING_RANGES.longBreakMinutes"
-        :model-value="settings.longBreakMinutes"
-        @update:model-value="emit('update', { longBreakMinutes: $event })"
+      <PixelDurationField
+        v-for="key in DURATION_KEYS"
+        :key="key"
+        :label="DURATION_LABELS[key]"
+        :seconds="settings[key]"
+        :range="SETTING_RANGES[key]"
+        :button-step="DURATION_BUTTON_STEP"
+        @update="emit('update', { [key]: $event })"
+        @edit="emit('edit', key)"
       />
       <PixelStepper
         label="幾個專注後長休息"
@@ -79,7 +80,7 @@ const emit = defineEmits<{ update: [patch: Partial<Settings>] }>()
         @update:model-value="emit('update', { scanlines: $event })"
       />
     </fieldset>
-    <p class="settings-panel__note">設定與紀錄只存在這台裝置的瀏覽器裡。</p>
+    <p class="settings-panel__note">設定會自動保存在這台裝置的瀏覽器裡，下次打開不用重設。</p>
   </div>
 </template>
 
