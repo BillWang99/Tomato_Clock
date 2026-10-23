@@ -60,7 +60,8 @@ async function status(url) {
 async function checkSite() {
   const html = await (await fetch(SITE, { cache: 'no-store' })).text()
   const assets = [...html.matchAll(/\/Tomato_Clock\/(assets\/[^"]+)/g)].map((m) => m[1])
-  const files = ['', 'sw.js', 'registerSW.js', 'push-sw.js', 'manifest.webmanifest', ...assets]
+  // Service Worker 由 App 自己註冊（src/composables/useAppUpdate.ts），所以沒有 registerSW.js
+  const files = ['', 'sw.js', 'push-sw.js', 'manifest.webmanifest', ...assets]
   const results = await Promise.all(
     files.map(async (file) => [file || '/', await status(SITE + file)]),
   )

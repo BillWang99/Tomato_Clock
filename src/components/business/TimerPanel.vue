@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { AlertState } from '@/composables/usePushAlerts'
 import type { Phase, TimerStatus } from '@/core/timer'
 import type { TomatoMood } from '@/core/tomatoSprite'
 import CompletionBurst from './CompletionBurst.vue'
@@ -6,6 +7,7 @@ import ControlBar from './ControlBar.vue'
 import CycleMeter from './CycleMeter.vue'
 import PhaseTabs from './PhaseTabs.vue'
 import PixelTomato from './PixelTomato.vue'
+import PushAlertHint from './PushAlertHint.vue'
 import TimerDisplay from './TimerDisplay.vue'
 import TimeUpBanner from './TimeUpBanner.vue'
 
@@ -20,6 +22,8 @@ defineProps<{
   stage: 0 | 1 | 2 | 3
   celebrateKey: number
   finishedPhase: Phase | null
+  /** 鎖屏提醒的排程狀態；推播沒開就是 null，不顯示 */
+  pushHint: AlertState | null
 }>()
 
 const emit = defineEmits<{
@@ -53,6 +57,7 @@ const emit = defineEmits<{
         :completed="completedInCycle"
         :interval="longBreakInterval"
       />
+      <PushAlertHint v-if="pushHint" class="timer-panel__push" :state="pushHint" />
     </div>
 
     <TimeUpBanner v-if="finishedPhase" :finished-phase="finishedPhase" @dismiss="emit('dismiss')" />
@@ -133,7 +138,8 @@ const emit = defineEmits<{
     grid-template-columns: var(--tomato-size) minmax(0, 1fr);
     grid-template-areas:
       'stage display'
-      'stage cycle';
+      'stage cycle'
+      'stage push';
     align-items: center;
     column-gap: var(--space-2);
     row-gap: var(--space-1);
@@ -150,6 +156,10 @@ const emit = defineEmits<{
 
   .timer-panel__cycle {
     grid-area: cycle;
+  }
+
+  .timer-panel__push {
+    grid-area: push;
   }
 }
 </style>

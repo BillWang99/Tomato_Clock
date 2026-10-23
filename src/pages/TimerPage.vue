@@ -8,6 +8,8 @@ import InstallGuideDialog from '@/components/business/InstallGuideDialog.vue'
 import SettingsPanel from '@/components/business/SettingsPanel.vue'
 import TimeKeypad from '@/components/business/TimeKeypad.vue'
 import TimerPanel from '@/components/business/TimerPanel.vue'
+import UpdateBanner from '@/components/business/UpdateBanner.vue'
+import { useAppUpdate } from '@/composables/useAppUpdate'
 import { useDurationEditor } from '@/composables/useDurationEditor'
 import { useInstallPrompt } from '@/composables/useInstallPrompt'
 import { useMediaQuery } from '@/composables/useMediaQuery'
@@ -29,6 +31,7 @@ const {
   wakeLockSupported,
   pushStatus,
   pushError,
+  pushAlertState,
   finishedPhase,
   celebrateKey,
   flashKey,
@@ -36,6 +39,7 @@ const {
 
 const editor = useDurationEditor(settings, session.updateSettings)
 const installer = useInstallPrompt()
+const updater = useAppUpdate()
 
 const settingsOpen = ref(false)
 // 只有寬又直的畫面（摺疊機展開、直放的平板）把設定放右欄，兩欄中間剛好避開摺痕；
@@ -71,6 +75,7 @@ const showSidePanel = useMediaQuery('(min-width: 600px) and (orientation: portra
         :stage="stage"
         :celebrate-key="celebrateKey"
         :finished-phase="finishedPhase"
+        :push-hint="pushStatus === 'on' ? pushAlertState : null"
         @select="session.choosePhase"
         @toggle="session.toggle"
         @reset="session.reset"
@@ -91,6 +96,10 @@ const showSidePanel = useMediaQuery('(min-width: 600px) and (orientation: portra
               @update="session.updateSettings"
               @edit="editor.openEditor"
               @install-help="installer.install"
+              :version="updater.version"
+              :update-check="updater.check.value"
+              @check-update="updater.checkNow"
+              @apply-update="updater.applyUpdate"
             />
           </PixelScrollArea>
         </PixelPanel>
@@ -113,6 +122,10 @@ const showSidePanel = useMediaQuery('(min-width: 600px) and (orientation: portra
         @update="session.updateSettings"
         @edit="editor.openEditor"
         @install-help="installer.install"
+        :version="updater.version"
+        :update-check="updater.check.value"
+        @check-update="updater.checkNow"
+        @apply-update="updater.applyUpdate"
       />
     </PixelDialog>
 
@@ -129,6 +142,12 @@ const showSidePanel = useMediaQuery('(min-width: 600px) and (orientation: portra
       v-if="installer.guidePlatform.value"
       :platform="installer.guidePlatform.value"
       @close="installer.closeGuide"
+    />
+
+    <UpdateBanner
+      v-if="updater.needRefresh.value && !finishedPhase"
+      @update="updater.applyUpdate"
+      @dismiss="updater.dismiss"
     />
 
     <div v-if="flashKey > 0" :key="flashKey" class="timer-page__flash" aria-hidden="true" />

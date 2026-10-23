@@ -1,6 +1,11 @@
-import { computed, ref, watch, type Ref } from 'vue'
+import { computed, onScopeDispose, ref, watch, type Ref } from 'vue'
 import { cancelPush, PushGoneError, schedulePush, type PushSubscriptionData } from '@/api/push'
-import { desiredAlert, nextPushAction } from '@/core/pushPlan'
+import {
+  desiredAlert,
+  nextPushAction,
+  restoreScheduled,
+  type ScheduledAlert,
+} from '@/core/pushPlan'
 import { isPushConfigured, VAPID_PUBLIC_KEY } from '@/core/pushConfig'
 import { readJson, STORAGE_KEYS, writeJson } from '@/core/storage'
 import type { Settings } from '@/core/settings'
@@ -72,6 +77,20 @@ async function currentSubscription(
   return data
 }
 
+/**
+ * 給畫面看的排程狀態（計時器下方那一行）
+ * idle：沒有要排的提醒；sending：正在送給伺服器；scheduled：伺服器確認排好了；failed：沒排上
+ */
+export type AlertState = 'idle' | 'sending' | 'scheduled' | 'failed'
+
+// iOS 不允許在使用者點擊以外的時機重新訂閱推播（例如換金鑰後要重訂）
+function describeError(error: unknown): string {
+  if (error instanceof DOMException && error.name === 'NotAllowedError') {
+    return '推播需要重新開啟：請到設定把「鎖螢幕也提醒」關掉再打開'
+  }
+  return error instanceof Error ? error.message : '推播設定失敗'
+}
+
 // 鎖螢幕也提醒：開始計時就請伺服器在時間到時發推播，暫停、重設、跳過就取消。
 // 推播失敗只顯示一行說明，計時本身完全不受影響。
 export function usePushAlerts(
@@ -82,18 +101,18 @@ export function usePushAlerts(
   const supported = isPushConfigured() && browserSupportsPush()
   const working = ref(false)
   const errorMessage = ref('')
+  const alertState = ref<AlertState>('idle')
   const permission = ref<NotificationPermission>(
     'Notification' in window ? Notification.permission : 'default',
   )
 
   let subscription: PushSubscriptionData | null = null
-  // 伺服器上目前排著的提醒編號。存在瀏覽器裡：重新整理後才知道要不要取消
-  const stored = readJson(STORAGE_KEYS.push)
-  let scheduledToken: string | null = typeof stored === 'string' ? stored : null
+  // 伺服器上可能排著的提醒（含「送了但沒確認」）。存在瀏覽器裡：重新整理後才知道要不要重送或取消
+  let scheduled: ScheduledAlert | null = restoreScheduled(readJson(STORAGE_KEYS.push))
 
-  function rememberToken(token: string | null): void {
-    scheduledToken = token
-    writeJson(STORAGE_KEYS.push, token)
+  function remember(next: ScheduledAlert | null): void {
+    scheduled = next
+    writeJson(STORAGE_KEYS.push, next)
   }
 
   const status = computed<PushStatus>(() => {
@@ -105,21 +124,32 @@ export function usePushAlerts(
     return settings.value.pushAlerts ? 'on' : 'off'
   })
 
-  // 把伺服器上的提醒調成「應該」的樣子；同一時間只跑一個，避免排程和取消的順序亂掉
-  let syncing: Promise<void> = Promise.resolve()
+  function pushReady(): boolean {
+    return settings.value.pushAlerts && permission.value === 'granted'
+  }
+
+  // 所有跟伺服器、訂閱有關的事排成一列依序做，避免排程和取消的順序亂掉
+  let queue: Promise<void> = Promise.resolve()
+  function enqueue(task: () => Promise<void>): Promise<void> {
+    queue = queue.then(task)
+    return queue
+  }
+
+  // 把伺服器上的提醒調成「應該」的樣子
   function sync(): Promise<void> {
-    syncing = syncing.then(async () => {
-      const enabled = settings.value.pushAlerts && permission.value === 'granted'
-      const action = nextPushAction(
-        scheduledToken,
-        desiredAlert(timerState.value, enabled, Date.now()),
-      )
-      if (action.type === 'none') return
+    return enqueue(async () => {
+      const desired = desiredAlert(timerState.value, pushReady(), Date.now())
+      const action = nextPushAction(scheduled, desired)
+      if (action.type === 'none') {
+        alertState.value = desired ? 'scheduled' : 'idle'
+        return
+      }
       try {
         if (action.type === 'schedule') {
           const { delayMs, phase, token } = action.alert
-          // 送出前就先記住：請求到了伺服器但回應遺失時，之後暫停還是會送取消
-          rememberToken(token)
+          alertState.value = 'sending'
+          // 送出前先記成「沒確認」：請求到了伺服器但回應遺失時，之後暫停還是會送取消、回到 App 會重送
+          remember({ token, confirmed: false })
           subscription ??= await currentSubscription(true)
           try {
             await schedulePush(subscription, delayMs, phase, token)
@@ -128,19 +158,37 @@ export function usePushAlerts(
             subscription = await currentSubscription(true, true)
             await schedulePush(subscription, delayMs, phase, token)
           }
+          remember({ token, confirmed: true })
+          alertState.value = 'scheduled'
         } else {
-          // 取消成功才忘記編號；失敗（例如斷網）就留著，下次狀態改變時再取消一次
+          // 取消成功才忘記；失敗（例如斷網）就留著，下次再取消一次
           subscription ??= await currentSubscription(false)
           await cancelPush(subscription.endpoint, action.token)
-          rememberToken(null)
+          remember(null)
+          alertState.value = 'idle'
         }
         // 只有真的送出請求而且成功才清掉錯誤訊息，打開開關失敗的說明不會被蓋掉
         errorMessage.value = ''
       } catch (error) {
-        errorMessage.value = error instanceof Error ? error.message : '推播設定失敗'
+        if (action.type === 'schedule') alertState.value = 'failed'
+        errorMessage.value = describeError(error)
       }
     })
-    return syncing
+  }
+
+  /**
+   * 按「開始」的那一刻呼叫：趁還在使用者點擊裡先準備好訂閱（iOS 重新訂閱需要點擊），
+   * 排程請求才能馬上送出，不會等到使用者已經鎖螢幕才送
+   */
+  function prepare(): Promise<void> {
+    if (!supported || !pushReady() || subscription) return queue
+    return enqueue(async () => {
+      try {
+        subscription ??= await currentSubscription(true)
+      } catch (error) {
+        errorMessage.value = describeError(error)
+      }
+    })
   }
 
   // 必須在使用者點擊時呼叫：iOS 只允許在手勢中詢問通知權限
@@ -154,7 +202,7 @@ export function usePushAlerts(
       subscription = await currentSubscription(true)
       updateSettings({ pushAlerts: true })
     } catch (error) {
-      errorMessage.value = error instanceof Error ? error.message : '推播設定失敗'
+      errorMessage.value = describeError(error)
     } finally {
       working.value = false
     }
@@ -176,7 +224,19 @@ export function usePushAlerts(
       () => void sync(),
       { immediate: true },
     )
+    // 回到 App、網路恢復時，把上次沒送成功（例如鎖螢幕時被中斷）的提醒補送
+    const retry = () => {
+      if (document.visibilityState === 'visible') void sync()
+    }
+    document.addEventListener('visibilitychange', retry)
+    window.addEventListener('online', retry)
+    window.addEventListener('pageshow', retry)
+    onScopeDispose(() => {
+      document.removeEventListener('visibilitychange', retry)
+      window.removeEventListener('online', retry)
+      window.removeEventListener('pageshow', retry)
+    })
   }
 
-  return { status, errorMessage, toggle }
+  return { status, errorMessage, alertState, toggle, prepare }
 }

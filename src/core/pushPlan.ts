@@ -28,16 +28,35 @@ export type PushAction =
   { type: 'none' } | { type: 'schedule'; alert: DesiredAlert } | { type: 'cancel'; token: string }
 
 /**
- * 比對「伺服器上排著的」與「應該排著的」，決定要做什麼。
- * 排新的會直接取代舊的（伺服器每支手機只留一筆），所以換提醒不用先取消。
+ * 伺服器上「可能」排著的提醒。
+ * confirmed=false：請求送出了但沒收到成功回應（例如鎖螢幕時被中斷），伺服器上可能有、也可能沒有
+ */
+export interface ScheduledAlert {
+  token: string
+  confirmed: boolean
+}
+
+/**
+ * 比對「伺服器上可能排著的」與「應該排著的」，決定要做什麼。
+ * 排新的會直接取代舊的（伺服器每支手機只留一筆），所以換提醒不用先取消；
+ * 沒確認成功的提醒會再送一次（重送同一個編號是安全的，伺服器只是取代成同一筆）。
  */
 export function nextPushAction(
-  scheduledToken: string | null,
+  scheduled: ScheduledAlert | null,
   desired: DesiredAlert | null,
 ): PushAction {
   if (desired) {
-    if (desired.token === scheduledToken) return { type: 'none' }
+    if (desired.token === scheduled?.token && scheduled.confirmed) return { type: 'none' }
     return { type: 'schedule', alert: desired }
   }
-  return scheduledToken ? { type: 'cancel', token: scheduledToken } : { type: 'none' }
+  return scheduled ? { type: 'cancel', token: scheduled.token } : { type: 'none' }
+}
+
+/** 從瀏覽器讀回來的資料：舊版存的是編號字串，當作「沒確認」，下次會再送一次 */
+export function restoreScheduled(raw: unknown): ScheduledAlert | null {
+  if (typeof raw === 'string' && raw) return { token: raw, confirmed: false }
+  if (typeof raw !== 'object' || raw === null) return null
+  const { token, confirmed } = raw as Record<string, unknown>
+  if (typeof token !== 'string' || !token) return null
+  return { token, confirmed: confirmed === true }
 }

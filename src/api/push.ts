@@ -36,6 +36,8 @@ async function post(path: string, body: unknown): Promise<void> {
       // 用 text/plain 是「簡單請求」，瀏覽器不用每次先送一個預檢請求，伺服器一樣當 JSON 讀
       headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
       body: JSON.stringify(body),
+      // 頁面被凍結（例如按完開始馬上鎖螢幕）時，瀏覽器也會把這個請求送完
+      keepalive: true,
       signal: AbortSignal.timeout(TIMEOUT_MS),
     })
   } catch {

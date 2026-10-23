@@ -2,8 +2,10 @@
 import PixelDurationField from '@/components/base/PixelDurationField.vue'
 import PixelStepper from '@/components/base/PixelStepper.vue'
 import PixelSwitch from '@/components/base/PixelSwitch.vue'
+import AppVersionInfo from './AppVersionInfo.vue'
 import PushAlertSetting from './PushAlertSetting.vue'
 import type { PushStatus } from '@/composables/usePushAlerts'
+import type { UpdateCheck } from '@/composables/useAppUpdate'
 import { DURATION_LABELS } from '@/core/format'
 import {
   DURATION_BUTTON_STEP,
@@ -18,6 +20,8 @@ defineProps<{
   wakeLockSupported: boolean
   pushStatus: PushStatus
   pushError: string
+  version: string
+  updateCheck: UpdateCheck
 }>()
 
 const emit = defineEmits<{
@@ -28,6 +32,8 @@ const emit = defineEmits<{
   togglePush: [on: boolean]
   /** 想知道怎麼加入主畫面 */
   installHelp: []
+  checkUpdate: []
+  applyUpdate: []
 }>()
 </script>
 
@@ -95,6 +101,12 @@ const emit = defineEmits<{
       />
     </fieldset>
     <p class="settings-panel__note">設定會自動保存在這台裝置的瀏覽器裡，下次打開不用重設。</p>
+    <AppVersionInfo
+      :version="version"
+      :check="updateCheck"
+      @check-update="emit('checkUpdate')"
+      @update="emit('applyUpdate')"
+    />
   </div>
 </template>
 

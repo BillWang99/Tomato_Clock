@@ -70,6 +70,8 @@ export function usePomodoroSession() {
   async function toggle(): Promise<void> {
     const wasRunning = isRunning.value
     dismissTimeUp()
+    // 要開始計時：趁還在點擊裡先準備好推播訂閱，排程請求才能在使用者鎖螢幕前送出
+    if (!wasRunning) void push.prepare()
     timer.toggle()
     await sound.unlock()
     sound.play(wasRunning ? 'pause' : 'start')
@@ -104,6 +106,7 @@ export function usePomodoroSession() {
     wakeLockSupported,
     pushStatus: push.status,
     pushError: push.errorMessage,
+    pushAlertState: push.alertState,
     togglePush: push.toggle,
     finishedPhase,
     celebrateKey,
