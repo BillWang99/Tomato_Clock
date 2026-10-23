@@ -8,12 +8,29 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
 
-// 建置時寫進程式的版本號，設定裡會顯示「v0.7.0（abc1234）」，方便確認手機上是哪一版
+// 會影響網站程式的檔案；只改 docs/、scripts/、push-worker/ 的 commit 不算
+const APP_PATHS = [
+  'src',
+  'public',
+  'index.html',
+  'package.json',
+  'package-lock.json',
+  'vite.config.ts',
+  'tsconfig.json',
+  'tsconfig.app.json',
+]
+
+// 建置時寫進程式的版本號，設定裡會顯示「v0.7.0（abc1234）」。用「最後一次改到網站程式的 commit」，
+// 不用 HEAD：只改文件的 commit 建出來的檔案就完全一樣，使用者不會看到假的「有新版本」
 function buildId(): string {
-  try {
-    return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+  const run = (cmd: string) =>
+    execSync(cmd, { stdio: ['ignore', 'pipe', 'ignore'] })
       .toString()
       .trim()
+  try {
+    return (
+      run(`git log -1 --format=%h -- ${APP_PATHS.join(' ')}`) || run('git rev-parse --short HEAD')
+    )
   } catch {
     return 'dev'
   }
