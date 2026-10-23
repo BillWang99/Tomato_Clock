@@ -1,0 +1,47 @@
+# bstack 專案設定（2026-10-23 由 /bstack:init 產生）
+# 只需要改跟預設不同的地方。說明見外掛的 docs/設定說明.md。
+
+project:
+  name: tomato_clock
+  stack: node           # laravel | node | python | java | other
+  frontend: vue         # vue | react | blade | none
+  legacy: false          # 舊專案升級：true 時以基準線「只准變好」
+
+# 要套用的開發規範 skill（依專案語言）
+standards:
+  - vue-development-standards
+
+# 純前端專案，沒有資料庫（計時紀錄若要保存，存在瀏覽器 localStorage）
+database:
+  type: null
+
+# 每次檢查會跑的指令（失敗就擋）
+# 假設專案用 Vite + Vue 3 建立，並安裝 prettier、eslint、vitest
+# {files:...} 只換成這次改過的檔案；沒改到就略過
+checks:
+  format: ["npx prettier --check {files:js,ts,vue,css,json}"]
+  lint: ["npx eslint {files:js,ts,vue}"]
+  test: ["npx vitest run --passWithNoTests --reporter=default --reporter=junit --outputFile.junit=.bstack/reports/junit.xml"]
+  test_report: ".bstack/reports/junit.xml"
+  related_test: "npx vitest run {name}"
+
+limits:
+  warn_lines: 300
+  max_lines: 500
+  max_failures: 3        # 同一個問題失敗幾次就停下來通知人
+
+# 沒有資料庫，不需要個資欄位與業務規則
+sensitive_columns: []
+invariants: []
+
+features:
+  routes_command: ""
+  mcp_tools_command: ""
+
+release:
+  smoke_urls: []         # 部署位置確定後填，例如 "https://example.github.io/tomato_clock/"
+  health_command: ""
+  log_command: ""        # 純前端沒有伺服器紀錄
+
+docs:
+  root: docs
